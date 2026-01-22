@@ -1,104 +1,42 @@
 import { useState } from 'react';
-import { Lock, CheckCircle2, Circle, Star, Trophy } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
-import { Button } from '@/app/components/ui/button';
+import { CheckCircle2, Circle, Star, Trophy } from 'lucide-react';
 import { Progress } from '@/app/components/ui/progress';
-
-interface Lesson {
-  id: number;
-  title: string;
-  description: string;
-  status: 'completed' | 'current' | 'locked';
-  xp: number;
-}
+import { SimpleLessonViewer } from './SimpleLessonViewer';
+import { lessonsData, LessonContent } from './lessonData';
 
 export function Learn() {
-  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [showLessonDialog, setShowLessonDialog] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState<LessonContent | null>(null);
+  const [completedLessons, setCompletedLessons] = useState<Set<number>>(
+    new Set([1, 2])
+  );
 
-  const lessons: Lesson[] = [
-    {
-      id: 1,
-      title: 'Credit Card Basics',
-      description: 'Learn what credit cards are and how they work',
-      status: 'completed',
-      xp: 50
-    },
-    {
-      id: 2,
-      title: 'Understanding Interest Rates',
-      description: 'Master APR, compound interest, and payment cycles',
-      status: 'completed',
-      xp: 75
-    },
-    {
-      id: 3,
-      title: 'Credit Score Fundamentals',
-      description: 'Discover what affects your credit score',
-      status: 'current',
-      xp: 100
-    },
-    {
-      id: 4,
-      title: 'Payment Strategies',
-      description: 'Learn optimal payment methods and timing',
-      status: 'locked',
-      xp: 100
-    },
-    {
-      id: 5,
-      title: 'Rewards Programs',
-      description: 'Understand cashback, points, and miles',
-      status: 'locked',
-      xp: 125
-    },
-    {
-      id: 6,
-      title: 'Credit Utilization',
-      description: 'Master the 30% rule and balance management',
-      status: 'locked',
-      xp: 100
-    },
-    {
-      id: 7,
-      title: 'Fees and Charges',
-      description: 'Identify and avoid unnecessary credit card fees',
-      status: 'locked',
-      xp: 75
-    },
-    {
-      id: 8,
-      title: 'Security Best Practices',
-      description: 'Protect yourself from fraud and identity theft',
-      status: 'locked',
-      xp: 125
-    },
-    {
-      id: 9,
-      title: 'Balance Transfers',
-      description: 'Learn when and how to transfer balances',
-      status: 'locked',
-      xp: 150
-    },
-    {
-      id: 10,
-      title: 'Advanced Strategies',
-      description: 'Card stacking, churning, and optimization',
-      status: 'locked',
-      xp: 200
-    }
-  ];
+  const totalXP = Array.from(completedLessons).reduce((sum, lessonId) => {
+    const lesson = lessonsData.find(l => l.id === lessonId);
+    return sum + (lesson?.xp || 0);
+  }, 0);
 
-  const totalXP = lessons.filter(l => l.status === 'completed').reduce((sum, l) => sum + l.xp, 0);
-  const maxXP = lessons.reduce((sum, l) => sum + l.xp, 0);
+  const maxXP = lessonsData.reduce((sum, l) => sum + l.xp, 0);
   const progressPercent = (totalXP / maxXP) * 100;
 
-  const handleLessonClick = (lesson: Lesson) => {
-    if (lesson.status !== 'locked') {
-      setSelectedLesson(lesson);
-      setShowLessonDialog(true);
-    }
+  const handleLessonClick = (lesson: LessonContent) => {
+    setSelectedLesson(lesson);
+    // Mark lesson as completed when viewed
+    setCompletedLessons(new Set([...completedLessons, lesson.id]));
   };
+
+  const handleBackToLessons = () => {
+    setSelectedLesson(null);
+  };
+
+  // Render SimpleLessonViewer if a lesson is selected
+  if (selectedLesson) {
+    return (
+      <SimpleLessonViewer
+        lesson={selectedLesson}
+        onBack={handleBackToLessons}
+      />
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -110,7 +48,7 @@ export function Learn() {
               Learn
             </h1>
             <p className="text-lg text-gray-300">
-              Master credit cards through interactive lessons
+              Master credit cards through comprehensive lessons
             </p>
           </div>
           <div className="text-right">
@@ -131,144 +69,158 @@ export function Learn() {
         </div>
       </div>
 
-      {/* Learning Path */}
+      {/* Level 1 - Beginner */}
       <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/30">
-        <h2 className="text-2xl font-semibold text-white mb-6">Your Learning Path</h2>
-        
-        <div className="space-y-4">
-          {lessons.map((lesson, index) => (
-            <div key={lesson.id} className="relative">
-              {/* Connection Line */}
-              {index < lessons.length - 1 && (
-                <div className="absolute left-6 top-16 w-0.5 h-8 bg-gradient-to-b from-purple-400 to-pink-400" />
-              )}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500">
+            <span className="font-bold text-white">1</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-white">Level 1: Fundamentals</h2>
+        </div>
+        <p className="text-gray-300 mb-6">Master the basics of credit cards and financial concepts</p>
 
-              {/* Lesson Card */}
+        <div className="space-y-3">
+          {lessonsData
+            .filter(l => l.level === 1)
+            .map((lesson) => (
               <div
+                key={lesson.id}
                 onClick={() => handleLessonClick(lesson)}
-                className={`relative flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 ${
-                  lesson.status === 'completed'
-                    ? 'bg-purple-500/20 border-purple-400 cursor-pointer hover:shadow-lg hover:shadow-purple-500/50'
-                    : lesson.status === 'current'
-                    ? 'bg-pink-500/20 border-pink-400 cursor-pointer hover:shadow-lg hover:shadow-pink-500/50 ring-2 ring-pink-500 ring-offset-2 ring-offset-gray-900'
-                    : 'bg-gray-800/30 border-gray-700 opacity-60'
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                  completedLessons.has(lesson.id)
+                    ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
+                    : 'bg-blue-500/20 border-blue-400 hover:shadow-lg hover:shadow-blue-500/50'
                 }`}
               >
-                {/* Status Icon */}
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    lesson.status === 'completed'
-                      ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                      : lesson.status === 'current'
-                      ? 'bg-gradient-to-br from-pink-500 to-pink-600'
-                      : 'bg-gray-700'
+                    completedLessons.has(lesson.id)
+                      ? 'bg-gradient-to-br from-green-500 to-green-600'
+                      : 'bg-gradient-to-br from-blue-500 to-blue-600'
                   }`}
                 >
-                  {lesson.status === 'completed' ? (
+                  {completedLessons.has(lesson.id) ? (
                     <CheckCircle2 className="w-6 h-6 text-white" />
-                  ) : lesson.status === 'current' ? (
-                    <Circle className="w-6 h-6 text-white" />
                   ) : (
-                    <Lock className="w-6 h-6 text-gray-400" />
+                    <Circle className="w-6 h-6 text-white" />
                   )}
                 </div>
 
-                {/* Lesson Info */}
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-semibold text-white">{lesson.title}</h3>
-                    {lesson.status === 'current' && (
-                      <span className="px-2 py-0.5 bg-pink-500 text-white text-xs rounded-full font-medium">
-                        In Progress
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="text-lg font-semibold text-white">{lesson.title}</h3>
                   <p className="text-sm text-gray-300">{lesson.description}</p>
                 </div>
 
-                {/* XP Badge */}
-                <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 rounded-full">
+                <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 rounded-full flex-shrink-0">
                   <Star className="w-4 h-4 text-yellow-400" />
                   <span className="text-sm font-semibold text-yellow-300">{lesson.xp} XP</span>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
-      {/* Lesson Dialog */}
-      <Dialog open={showLessonDialog} onOpenChange={setShowLessonDialog}>
-        <DialogContent className="bg-gradient-to-br from-gray-900 to-purple-900 border-purple-500/50 max-w-2xl">
-          {selectedLesson && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                  {selectedLesson.status === 'completed' ? (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                      <CheckCircle2 className="w-6 h-6 text-white" />
-                    </div>
+      {/* Level 2 - Intermediate */}
+      <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/30">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500">
+            <span className="font-bold text-white">2</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-white">Level 2: Intermediate</h2>
+        </div>
+        <p className="text-gray-300 mb-6">Build on your foundation with advanced concepts and strategies</p>
+
+        <div className="space-y-3">
+          {lessonsData
+            .filter(l => l.level === 2)
+            .map((lesson) => (
+              <div
+                key={lesson.id}
+                onClick={() => handleLessonClick(lesson)}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                  completedLessons.has(lesson.id)
+                    ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
+                    : 'bg-purple-500/20 border-purple-400 hover:shadow-lg hover:shadow-purple-500/50'
+                }`}
+              >
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    completedLessons.has(lesson.id)
+                      ? 'bg-gradient-to-br from-green-500 to-green-600'
+                      : 'bg-gradient-to-br from-purple-500 to-purple-600'
+                  }`}
+                >
+                  {completedLessons.has(lesson.id) ? (
+                    <CheckCircle2 className="w-6 h-6 text-white" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center">
-                      <Circle className="w-6 h-6 text-white" />
-                    </div>
+                    <Circle className="w-6 h-6 text-white" />
                   )}
-                  {selectedLesson.title}
-                </DialogTitle>
-              </DialogHeader>
+                </div>
 
-              <div className="space-y-6 mt-4">
-                <p className="text-gray-300">{selectedLesson.description}</p>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white">{lesson.title}</h3>
+                  <p className="text-sm text-gray-300">{lesson.description}</p>
+                </div>
 
-                {selectedLesson.status === 'completed' ? (
-                  <div className="bg-purple-500/20 border border-purple-400 rounded-xl p-6 text-center">
-                    <CheckCircle2 className="w-12 h-12 text-purple-400 mx-auto mb-3" />
-                    <h3 className="text-xl font-semibold text-white mb-2">Lesson Completed!</h3>
-                    <p className="text-gray-300 mb-4">You've earned {selectedLesson.xp} XP</p>
-                    <Button
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                      onClick={() => setShowLessonDialog(false)}
-                    >
-                      Review Lesson
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="bg-pink-500/20 border border-pink-400 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">Lesson Content Preview</h3>
-                    <p className="text-gray-200 mb-4">
-                      This interactive lesson will cover key concepts through:
-                    </p>
-                    <ul className="space-y-2 text-gray-200 mb-6">
-                      <li className="flex items-start gap-2">
-                        <span className="text-pink-400">•</span>
-                        <span>Interactive quizzes and exercises</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-pink-400">•</span>
-                        <span>Real-world examples and scenarios</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-pink-400">•</span>
-                        <span>Visual aids and infographics</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-pink-400">•</span>
-                        <span>Practice problems to test your knowledge</span>
-                      </li>
-                    </ul>
-                    <Button
-                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                      onClick={() => setShowLessonDialog(false)}
-                    >
-                      Start Lesson (Demo)
-                    </Button>
-                  </div>
-                )}
+                <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 rounded-full flex-shrink-0">
+                  <Star className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm font-semibold text-yellow-300">{lesson.xp} XP</span>
+                </div>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            ))}
+        </div>
+      </div>
+
+      {/* Level 3 - Advanced */}
+      <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/30">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-pink-500">
+            <span className="font-bold text-white">3</span>
+          </div>
+          <h2 className="text-2xl font-semibold text-white">Level 3: Advanced</h2>
+        </div>
+        <p className="text-gray-300 mb-6">Master expert-level strategies and optimization techniques</p>
+
+        <div className="space-y-3">
+          {lessonsData
+            .filter(l => l.level === 3)
+            .map((lesson) => (
+              <div
+                key={lesson.id}
+                onClick={() => handleLessonClick(lesson)}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                  completedLessons.has(lesson.id)
+                    ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
+                    : 'bg-pink-500/20 border-pink-400 hover:shadow-lg hover:shadow-pink-500/50'
+                }`}
+              >
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    completedLessons.has(lesson.id)
+                      ? 'bg-gradient-to-br from-green-500 to-green-600'
+                      : 'bg-gradient-to-br from-pink-500 to-pink-600'
+                  }`}
+                >
+                  {completedLessons.has(lesson.id) ? (
+                    <CheckCircle2 className="w-6 h-6 text-white" />
+                  ) : (
+                    <Circle className="w-6 h-6 text-white" />
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white">{lesson.title}</h3>
+                  <p className="text-sm text-gray-300">{lesson.description}</p>
+                </div>
+
+                <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/20 rounded-full flex-shrink-0">
+                  <Star className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm font-semibold text-yellow-300">{lesson.xp} XP</span>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { User, Wallet as WalletIcon, Settings, LogOut, ChevronDown, Home as HomeIcon, GraduationCap, Sparkles } from 'lucide-react';
+import { User, Wallet as WalletIcon, Settings, LogOut, ChevronDown, Home as HomeIcon, GraduationCap, Sparkles, CreditCard } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/app/components/ui/dropdown-menu';
 import { Home } from '@/app/components/Home';
 import { Learn } from '@/app/components/Learn';
 import { SmartPick } from '@/app/components/SmartPick';
 import { Wallet } from '@/app/components/Wallet';
+import { Tracker } from '@/app/components/Tracker';
 import { SettingsPage } from '@/app/components/SettingsPage';
 
 interface UserDashboardProps {
@@ -13,7 +14,7 @@ interface UserDashboardProps {
 }
 
 export function UserDashboard({ onLogout }: UserDashboardProps) {
-  const [activePage, setActivePage] = useState<'home' | 'learn' | 'smartpick' | 'wallet' | 'settings'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'learn' | 'smartpick' | 'wallet' | 'tracker' | 'settings'>('home');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black">
@@ -111,6 +112,23 @@ export function UserDashboard({ onLogout }: UserDashboardProps) {
                 </div>
                 <span className="font-semibold">Smart Pick</span>
               </button>
+              <button
+                onClick={() => setActivePage('tracker')}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${
+                  activePage === 'tracker'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                    : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  activePage === 'tracker'
+                    ? 'bg-white/20'
+                    : 'bg-purple-500/20'
+                }`}>
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <span className="font-semibold">Tracker</span>
+              </button>
             </nav>
           </div>
         </aside>
@@ -121,6 +139,7 @@ export function UserDashboard({ onLogout }: UserDashboardProps) {
           {activePage === 'learn' && <Learn />}
           {activePage === 'smartpick' && <SmartPick />}
           {activePage === 'wallet' && <Wallet />}
+          {activePage === 'tracker' && <Tracker />}
           {activePage === 'settings' && <SettingsPage />}
         </main>
       </div>

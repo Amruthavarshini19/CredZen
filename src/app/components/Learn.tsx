@@ -4,13 +4,17 @@ import { Progress } from '@/app/components/ui/progress';
 import { SimpleLessonViewer } from './SimpleLessonViewer';
 import { lessonsData, LessonContent } from './lessonData';
 
-export function Learn() {
-  const [selectedLesson, setSelectedLesson] = useState<LessonContent | null>(null);
-  const [completedLessons, setCompletedLessons] = useState<Set<number>>(
-    new Set([1, 2])
-  );
+interface LearnProps {
+  completedLessons?: Set<number>;
+  onLessonsChange?: (lessons: Set<number>) => void;
+  onLessonComplete?: (lessonTitle: string) => void;
+}
 
-  const totalXP = Array.from(completedLessons).reduce((sum, lessonId) => {
+export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onLessonComplete }: LearnProps) {
+  const [selectedLesson, setSelectedLesson] = useState<LessonContent | null>(null);
+  const [localCompletedLessons, setLocalCompletedLessons] = useState<Set<number>>(completedLessons);
+
+  const totalXP = Array.from(localCompletedLessons).reduce((sum, lessonId) => {
     const lesson = lessonsData.find(l => l.id === lessonId);
     return sum + (lesson?.xp || 0);
   }, 0);
@@ -21,7 +25,15 @@ export function Learn() {
   const handleLessonClick = (lesson: LessonContent) => {
     setSelectedLesson(lesson);
     // Mark lesson as completed when viewed
-    setCompletedLessons(new Set([...completedLessons, lesson.id]));
+    const isNewCompletion = !localCompletedLessons.has(lesson.id);
+    const updated = new Set([...localCompletedLessons, lesson.id]);
+    setLocalCompletedLessons(updated);
+    onLessonsChange?.(updated);
+    
+    // Notify parent when lesson is newly completed
+    if (isNewCompletion) {
+      onLessonComplete?.(`Completed: ${lesson.title}`);
+    }
   };
 
   const handleBackToLessons = () => {
@@ -87,19 +99,19 @@ export function Learn() {
                 key={lesson.id}
                 onClick={() => handleLessonClick(lesson)}
                 className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                  completedLessons.has(lesson.id)
+                  localCompletedLessons.has(lesson.id)
                     ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
                     : 'bg-blue-500/20 border-blue-400 hover:shadow-lg hover:shadow-blue-500/50'
                 }`}
               >
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    completedLessons.has(lesson.id)
+                    localCompletedLessons.has(lesson.id)
                       ? 'bg-gradient-to-br from-green-500 to-green-600'
                       : 'bg-gradient-to-br from-blue-500 to-blue-600'
                   }`}
                 >
-                  {completedLessons.has(lesson.id) ? (
+                  {localCompletedLessons.has(lesson.id) ? (
                     <CheckCircle2 className="w-6 h-6 text-white" />
                   ) : (
                     <Circle className="w-6 h-6 text-white" />
@@ -138,19 +150,19 @@ export function Learn() {
                 key={lesson.id}
                 onClick={() => handleLessonClick(lesson)}
                 className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                  completedLessons.has(lesson.id)
+                  localCompletedLessons.has(lesson.id)
                     ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
                     : 'bg-purple-500/20 border-purple-400 hover:shadow-lg hover:shadow-purple-500/50'
                 }`}
               >
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    completedLessons.has(lesson.id)
+                    localCompletedLessons.has(lesson.id)
                       ? 'bg-gradient-to-br from-green-500 to-green-600'
                       : 'bg-gradient-to-br from-purple-500 to-purple-600'
                   }`}
                 >
-                  {completedLessons.has(lesson.id) ? (
+                  {localCompletedLessons.has(lesson.id) ? (
                     <CheckCircle2 className="w-6 h-6 text-white" />
                   ) : (
                     <Circle className="w-6 h-6 text-white" />
@@ -189,19 +201,19 @@ export function Learn() {
                 key={lesson.id}
                 onClick={() => handleLessonClick(lesson)}
                 className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                  completedLessons.has(lesson.id)
+                  localCompletedLessons.has(lesson.id)
                     ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
                     : 'bg-pink-500/20 border-pink-400 hover:shadow-lg hover:shadow-pink-500/50'
                 }`}
               >
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    completedLessons.has(lesson.id)
+                    localCompletedLessons.has(lesson.id)
                       ? 'bg-gradient-to-br from-green-500 to-green-600'
                       : 'bg-gradient-to-br from-pink-500 to-pink-600'
                   }`}
                 >
-                  {completedLessons.has(lesson.id) ? (
+                  {localCompletedLessons.has(lesson.id) ? (
                     <CheckCircle2 className="w-6 h-6 text-white" />
                   ) : (
                     <Circle className="w-6 h-6 text-white" />

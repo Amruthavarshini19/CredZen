@@ -1,18 +1,69 @@
 import { CreditCard, Brain, TrendingUp, Award, CheckCircle2 } from 'lucide-react';
+import { lessonsData } from './lessonData';
 
-export function Home() {
+interface Card {
+  id: number;
+  name: string;
+  lastFour: string;
+  type: string;
+  limit: number;
+  balance: number;
+  color: string;
+}
+
+interface Activity {
+  id: string;
+  title: string;
+  timestamp: number;
+}
+
+interface HomeProps {
+  onNavigate?: (page: 'learn' | 'smartpick' | 'wallet') => void;
+  completedLessons?: Set<number>;
+  cards?: Card[];
+  activities?: Activity[];
+}
+
+export function Home({ onNavigate, completedLessons = new Set(), cards = [], activities = [] }: HomeProps) {
+  // Calculate learning progress based on completed lessons
+  const totalXP = Array.from(completedLessons).reduce((sum, lessonId) => {
+    const lesson = lessonsData.find(l => l.id === lessonId);
+    return sum + (lesson?.xp || 0);
+  }, 0);
+
+  const maxXP = lessonsData.reduce((sum, l) => sum + l.xp, 0);
+  const learningProgressPercent = (totalXP / maxXP) * 100;
+
   const stats = [
-    { label: 'Learning Progress', value: '35%', icon: <Brain className="w-5 h-5" /> },
-    { label: 'Cards Managed', value: '3', icon: <CreditCard className="w-5 h-5" /> },
+    { label: 'Learning Progress', value: `${Math.round(learningProgressPercent)}%`, icon: <Brain className="w-5 h-5" /> },
+    { label: 'Cards Managed', value: cards.length.toString(), icon: <CreditCard className="w-5 h-5" /> },
     { label: 'Rewards Earned', value: '₹248', icon: <Award className="w-5 h-5" /> },
     { label: 'Credit Score', value: '742', icon: <TrendingUp className="w-5 h-5" /> }
   ];
 
-  const recentActivity = [
-    { title: 'Completed: Credit Card Basics', time: '2 hours ago' },
-    { title: 'Added new card: Chase Sapphire', time: 'Yesterday' },
-    { title: 'Unlocked achievement: First Week', time: '3 days ago' }
-  ];
+  // Format time difference
+  const formatTimeAgo = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+    return new Date(timestamp).toLocaleDateString();
+  };
+
+  // Sort activities by most recent first and limit to 1
+  const recentActivities = activities
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 1)
+    .map(activity => ({
+      title: activity.title,
+      time: formatTimeAgo(activity.timestamp)
+    }));
 
   return (
     <div className="space-y-8">
@@ -55,13 +106,19 @@ export function Home() {
         <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/30">
           <h2 className="text-2xl font-semibold text-white mb-4">Quick Actions</h2>
           <div className="space-y-3">
-            <button className="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg">
+            <button 
+              onClick={() => onNavigate?.('learn')}
+              className="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg cursor-pointer">
               Continue Learning
             </button>
-            <button className="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg">
+            <button 
+              onClick={() => onNavigate?.('smartpick')}
+              className="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg cursor-pointer">
               View Card Recommendations
             </button>
-            <button className="w-full text-left px-4 py-3 rounded-xl border-2 border-purple-400 text-gray-200 hover:bg-purple-500/20 transition-all">
+            <button 
+              onClick={() => onNavigate?.('wallet')}
+              className="w-full text-left px-4 py-3 rounded-xl border-2 border-purple-400 text-gray-200 hover:bg-purple-500/20 transition-all cursor-pointer">
               Manage Cards
             </button>
           </div>
@@ -71,15 +128,19 @@ export function Home() {
         <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/30">
           <h2 className="text-2xl font-semibold text-white mb-4">Recent Activity</h2>
           <div className="space-y-3">
-            {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-purple-500/20 transition-colors">
-                <CheckCircle2 className="w-5 h-5 text-pink-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-white font-medium">{activity.title}</p>
-                  <p className="text-sm text-gray-400">{activity.time}</p>
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity, index) => (
+                <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-purple-500/20 transition-colors">
+                  <CheckCircle2 className="w-5 h-5 text-pink-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-white font-medium">{activity.title}</p>
+                    <p className="text-sm text-gray-400">{activity.time}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-gray-400 text-center py-4">No activities yet. Start learning or add a card!</p>
+            )}
           </div>
         </div>
       </div>

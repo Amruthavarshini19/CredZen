@@ -1,10 +1,20 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent, useEffect } from 'react';
 import { CreditCard, Plus, Edit2, Trash2, Eye, EyeOff, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card } from '@/app/components/ui/card';
+
+interface WalletCard {
+  id: number;
+  name: string;
+  lastFour: string;
+  type: string;
+  limit: number;
+  balance: number;
+  color: string;
+}
 
 interface CreditCardData {
   id: string;
@@ -16,7 +26,14 @@ interface CreditCardData {
   lastFourDigits: string;
 }
 
-export function CreditCardTracker() {
+interface CreditCardTrackerProps {
+  cards?: WalletCard[];
+  onCardsChange?: (cards: WalletCard[]) => void;
+  onCardAdded?: (cardName: string) => void;
+  onCardDeleted?: (cardName: string) => void;
+}
+
+export function CreditCardTracker({ cards: walletCards = [], onCardsChange, onCardAdded, onCardDeleted }: CreditCardTrackerProps) {
   const [cards, setCards] = useState<CreditCardData[]>([
     {
       id: '1',
@@ -37,6 +54,22 @@ export function CreditCardTracker() {
       balance: 32700
     }
   ]);
+
+  // Sync wallet cards into tracker display
+  useEffect(() => {
+    if (walletCards && walletCards.length > 0) {
+      const trackerCards = walletCards.map((card, index) => ({
+        id: card.id.toString(),
+        cardName: card.name,
+        cardNumber: `****${card.lastFour}`,
+        lastFourDigits: card.lastFour,
+        limit: card.limit,
+        spend: card.balance,
+        balance: card.limit - card.balance
+      }));
+      setCards(trackerCards);
+    }
+  }, [walletCards]);
 
   const [showCardNumbers, setShowCardNumbers] = useState<Record<string, boolean>>({});
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -108,7 +141,20 @@ export function CreditCardTracker() {
         spend: formData.spend || 0,
         balance: formData.balance || 0,
       };
-      setCards([...cards, newCard]);
+      const updatedCards = [...cards, newCard];
+      setCards(updatedCards);
+
+      // Sync to wallet
+      const newWalletCard: WalletCard = {
+        id: parseInt(newCard.id),
+        name: newCard.cardName,
+        lastFour: lastFourDigits,
+        type: 'Visa',
+        limit: newCard.limit,
+        balance: newCard.spend,
+        color: 'from-blue-500 to-blue-700'
+      };
+      onCardsChange?.([...walletCards, newWalletCard]);
     }
 
     setIsAddDialogOpen(false);
@@ -117,7 +163,20 @@ export function CreditCardTracker() {
 
   const handleDeleteCard = (id: string) => {
     if (confirm('Are you sure you want to delete this card?')) {
-      setCards(cards.filter(card => card.id !== id));
+      // Find the card being deleted to get its name
+      const cardToDelete = cards.find(card => card.id === id);
+      
+      const updatedCards = cards.filter(card => card.id !== id);
+      setCards(updatedCards);
+      
+      // Sync to wallet
+      const updatedWalletCards = walletCards.filter(card => card.id.toString() !== id);
+      onCardsChange?.(updatedWalletCards);
+      
+      // Notify parent about deletion for activity tracking
+      if (cardToDelete) {
+        onCardDeleted?.(`Deleted card: ${cardToDelete.cardName}`);
+      }
     }
   };
 

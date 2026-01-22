@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Wallet as WalletIcon, Settings, LogOut, ChevronDown, Home as HomeIcon, GraduationCap, Sparkles, CreditCard } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/app/components/ui/dropdown-menu';
@@ -11,10 +11,101 @@ import { SettingsPage } from '@/app/components/SettingsPage';
 
 interface UserDashboardProps {
   onLogout: () => void;
+  userMobileNumber: string;
 }
 
-export function UserDashboard({ onLogout }: UserDashboardProps) {
+interface Card {
+  id: number;
+  name: string;
+  lastFour: string;
+  type: string;
+  limit: number;
+  balance: number;
+  color: string;
+}
+
+interface Activity {
+  id: string;
+  title: string;
+  timestamp: number;
+}
+
+export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps) {
   const [activePage, setActivePage] = useState<'home' | 'learn' | 'smartpick' | 'wallet' | 'tracker' | 'settings'>('home');
+  
+  // Initialize state with localStorage data
+  const [completedLessons, setCompletedLessons] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem(`credzen_lessons_${userMobileNumber}`);
+    return saved ? new Set(JSON.parse(saved)) : new Set([1, 2]);
+  });
+  
+  const [cards, setCards] = useState<Card[]>(() => {
+    const saved = localStorage.getItem(`credzen_cards_${userMobileNumber}`);
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        name: 'Chase Sapphire Preferred',
+        lastFour: '4532',
+        type: 'Visa',
+        limit: 5000,
+        balance: 1200,
+        color: 'from-blue-500 to-blue-700'
+      },
+      {
+        id: 2,
+        name: 'American Express Gold',
+        lastFour: '8765',
+        type: 'Amex',
+        limit: 10000,
+        balance: 850,
+        color: 'from-yellow-500 to-orange-600'
+      },
+      {
+        id: 3,
+        name: 'Capital One Quicksilver',
+        lastFour: '2341',
+        type: 'Mastercard',
+        limit: 3000,
+        balance: 0,
+        color: 'from-gray-600 to-gray-800'
+      }
+    ];
+  });
+
+  const [activities, setActivities] = useState<Activity[]>(() => {
+    const saved = localStorage.getItem(`credzen_activities_${userMobileNumber}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Save completed lessons to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`credzen_lessons_${userMobileNumber}`, JSON.stringify(Array.from(completedLessons)));
+  }, [completedLessons, userMobileNumber]);
+
+  // Save cards to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`credzen_cards_${userMobileNumber}`, JSON.stringify(cards));
+  }, [cards, userMobileNumber]);
+
+  // Save activities to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`credzen_activities_${userMobileNumber}`, JSON.stringify(activities));
+  }, [activities, userMobileNumber]);
+
+  const handleLogoutClick = () => {
+    // Clear any temporary data if needed
+    onLogout();
+  };
+
+  // Helper function to add activity
+  const addActivity = (title: string) => {
+    const newActivity: Activity = {
+      id: Date.now().toString(),
+      title,
+      timestamp: Date.now()
+    };
+    setActivities(prev => [newActivity, ...prev]);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black">
@@ -46,7 +137,7 @@ export function UserDashboard({ onLogout }: UserDashboardProps) {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onLogout} className="cursor-pointer hover:bg-red-500/20 text-red-400 focus:bg-red-500/20 focus:text-red-300">
+                <DropdownMenuItem onClick={handleLogoutClick} className="cursor-pointer hover:bg-red-500/20 text-red-400 focus:bg-red-500/20 focus:text-red-300">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Logout</span>
                 </DropdownMenuItem>
@@ -135,11 +226,27 @@ export function UserDashboard({ onLogout }: UserDashboardProps) {
 
         {/* Main Content Area */}
         <main className="flex-1 p-8">
-          {activePage === 'home' && <Home />}
-          {activePage === 'learn' && <Learn />}
+          {activePage === 'home' && <Home onNavigate={(page: 'learn' | 'smartpick' | 'wallet') => setActivePage(page)} completedLessons={completedLessons} cards={cards} activities={activities} />}
+          {activePage === 'learn' && <Learn completedLessons={completedLessons} onLessonsChange={(lessons: Set<number>) => {
+            setCompletedLessons(lessons);
+          }} onLessonComplete={(message: string) => {
+            addActivity(message);
+          }} />}
           {activePage === 'smartpick' && <SmartPick />}
-          {activePage === 'wallet' && <Wallet />}
-          {activePage === 'tracker' && <Tracker />}
+          {activePage === 'wallet' && <Wallet cards={cards} onCardsChange={(updatedCards: Card[]) => {
+            setCards(updatedCards);
+          }} onCardAdded={(message: string) => {
+            addActivity(message);
+          }} onCardDeleted={(message: string) => {
+            addActivity(message);
+          }} />}
+          {activePage === 'tracker' && <Tracker cards={cards} onCardsChange={(updatedCards: Card[]) => {
+            setCards(updatedCards);
+          }} onCardAdded={(message: string) => {
+            addActivity(message);
+          }} onCardDeleted={(message: string) => {
+            addActivity(message);
+          }} />}
           {activePage === 'settings' && <SettingsPage />}
         </main>
       </div>

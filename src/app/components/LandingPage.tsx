@@ -5,7 +5,7 @@ import { Input } from '@/app/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 
 interface LandingPageProps {
-  onLogin: () => void;
+  onLogin: (mobileNumber: string) => void;
 }
 
 export function LandingPage({ onLogin }: LandingPageProps) {
@@ -48,7 +48,9 @@ export function LandingPage({ onLogin }: LandingPageProps) {
 
   const handleLogin = () => {
     if (loginInput.trim()) {
-      onLogin();
+      onLogin(loginInput.trim());
+      setLoginInput('');
+      setShowLoginDialog(false);
     }
   };
 
@@ -192,8 +194,8 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                 type="text"
                 placeholder="Email or Phone Number"
                 value={loginInput}
-                onChange={(e) => setLoginInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLoginInput(e.target.value)}
+                onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleLogin()}
                 className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
               />
             </div>

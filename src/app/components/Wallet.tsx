@@ -15,10 +15,17 @@ interface Card {
   color: string;
 }
 
-export function Wallet() {
+interface WalletProps {
+  cards?: Card[];
+  onCardsChange?: (cards: Card[]) => void;
+  onCardAdded?: (cardName: string) => void;
+  onCardDeleted?: (cardName: string) => void;
+}
+
+export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, onCardDeleted }: WalletProps) {
   const [showAddCard, setShowAddCard] = useState(false);
   const [showCardNumbers, setShowCardNumbers] = useState<{ [key: number]: boolean }>({});
-  const [cards, setCards] = useState<Card[]>([
+  const [cards, setCards] = useState<Card[]>(initialCards.length > 0 ? initialCards : [
     {
       id: 1,
       name: 'Chase Sapphire Preferred',
@@ -74,14 +81,23 @@ export function Wallet() {
         balance: 0,
         color: 'from-purple-500 to-purple-700'
       };
-      setCards([...cards, newCardData]);
+      const updatedCards = [...cards, newCardData];
+      setCards(updatedCards);
+      onCardsChange?.(updatedCards);
+      onCardAdded?.(`Added new card: ${newCard.name}`);
       setNewCard({ name: '', number: '', type: '', limit: '' });
       setShowAddCard(false);
     }
   };
 
   const handleDeleteCard = (cardId: number) => {
-    setCards(cards.filter(card => card.id !== cardId));
+    const cardToDelete = cards.find(card => card.id === cardId);
+    const updatedCards = cards.filter(card => card.id !== cardId);
+    setCards(updatedCards);
+    onCardsChange?.(updatedCards);
+    if (cardToDelete) {
+      onCardDeleted?.(`Deleted card: ${cardToDelete.name}`);
+    }
   };
 
   const totalLimit = cards.reduce((sum, card) => sum + card.limit, 0);

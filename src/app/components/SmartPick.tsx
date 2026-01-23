@@ -1,13 +1,37 @@
 import { Brain, TrendingUp, DollarSign, Percent, Sparkles, ExternalLink } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 
-export function SmartPick() {
-  // Mock user data
-  const userData = {
-    cardLimit: 5000,
-    monthlySpend: 1200,
-    utilization: 24
-  };
+interface Card {
+  id: number;
+  name: string;
+  lastFour: string;
+  type: string;
+  limit: number;
+  balance: number;
+  color: string;
+}
+
+interface SmartPickProps {
+  cards?: Card[];
+}
+
+export function SmartPick({ cards = [] }: SmartPickProps) {
+  // Calculate totals from user's cards
+  const totalCreditLimit = cards.length > 0 
+    ? cards.reduce((sum, card) => sum + card.limit, 0)
+    : 5000;
+  
+  const totalAvailableBalance = cards.length > 0
+    ? cards.reduce((sum, card) => sum + (card.limit - card.balance), 0)
+    : 3800;
+
+  const utilizationPercentage = totalCreditLimit > 0
+    ? Math.round((totalAvailableBalance / totalCreditLimit) * 100)
+    : 24;
+
+  const totalMonthlySpend = cards.length > 0
+    ? cards.reduce((sum, card) => sum + card.balance, 0)
+    : 1200;
 
   const recommendations = [
     {
@@ -89,28 +113,32 @@ export function SmartPick() {
               <DollarSign className="w-5 h-5 text-purple-400" />
               <span className="text-sm text-gray-300">Total Credit Limit</span>
             </div>
-            <p className="text-2xl font-bold text-white">₹{userData.cardLimit.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-white">₹{totalCreditLimit.toLocaleString()}</p>
           </div>
           <div className="bg-purple-900/40 rounded-xl p-4 border border-purple-500/30">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-5 h-5 text-purple-400" />
               <span className="text-sm text-gray-300">Monthly Spend</span>
             </div>
-            <p className="text-2xl font-bold text-white">₹{userData.monthlySpend.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-white">₹{totalMonthlySpend.toLocaleString()}</p>
           </div>
           <div className="bg-purple-900/40 rounded-xl p-4 border border-purple-500/30">
             <div className="flex items-center gap-2 mb-2">
               <Percent className="w-5 h-5 text-purple-400" />
               <span className="text-sm text-gray-300">Utilization</span>
             </div>
-            <p className="text-2xl font-bold text-white">{userData.utilization}%</p>
-            <p className="text-xs text-green-400 font-medium mt-1">Excellent!</p>
+            <p className="text-2xl font-bold text-white">{utilizationPercentage}%</p>
+            <p className={`text-xs font-medium mt-1 ${utilizationPercentage < 30 ? 'text-green-400' : 'text-pink-400'}`}>
+              {utilizationPercentage < 30 ? 'Excellent!' : 'Consider reducing'}
+            </p>
           </div>
         </div>
-        <div className="mt-4 p-4 bg-green-500/20 border border-green-400/30 rounded-xl">
+        <div className={`mt-4 p-4 ${utilizationPercentage < 30 ? 'bg-green-500/20 border border-green-400/30' : 'bg-pink-500/20 border border-pink-400/30'} rounded-xl`}>
           <p className="text-sm text-gray-200">
-            <strong className="text-green-300">Great job!</strong> Your utilization is below 30%, 
-            which positively impacts your credit score. Based on your spending patterns, 
+            <strong className={utilizationPercentage < 30 ? 'text-green-300' : 'text-pink-300'}>
+              {utilizationPercentage < 30 ? 'Great job!' : 'Heads up!'}
+            </strong> Your utilization is {utilizationPercentage < 30 ? 'below 30%' : 'above 30%'}, 
+            which {utilizationPercentage < 30 ? 'positively impacts' : 'negatively impacts'} your credit score. Based on your spending patterns, 
             we've identified cards that will maximize your rewards.
           </p>
         </div>

@@ -101,8 +101,8 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
   };
 
   const totalLimit = cards.reduce((sum, card) => sum + card.limit, 0);
-  const totalBalance = cards.reduce((sum, card) => sum + card.balance, 0);
-  const overallUtilization = totalLimit > 0 ? ((totalBalance / totalLimit) * 100).toFixed(1) : '0';
+  const totalAvailableBalance = cards.reduce((sum, card) => sum + (card.limit - card.balance), 0);
+  const overallUtilization = totalLimit > 0 ? Math.round((totalAvailableBalance / totalLimit) * 100) : 0;
 
   return (
     <div className="space-y-8">
@@ -143,8 +143,8 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
         <div className="bg-purple-900/40 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
           <p className="text-sm text-gray-400 mb-2">Overall Utilization</p>
           <p className="text-3xl font-bold text-white">{overallUtilization}%</p>
-          <p className={`text-xs font-medium mt-1 ${parseFloat(overallUtilization) < 30 ? 'text-green-400' : 'text-pink-400'}`}>
-            {parseFloat(overallUtilization) < 30 ? 'Excellent!' : 'Consider reducing'}
+          <p className={`text-xs font-medium mt-1 ${overallUtilization < 30 ? 'text-green-400' : 'text-pink-400'}`}>
+            {overallUtilization < 30 ? 'Excellent!' : 'Consider reducing'}
           </p>
         </div>
       </div>
@@ -155,7 +155,8 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
         
         <div className="grid md:grid-cols-2 gap-6">
           {cards.map((card) => {
-            const utilization = card.limit > 0 ? ((card.balance / card.limit) * 100).toFixed(1) : '0';
+            const availableBalance = card.limit - card.balance;
+            const utilization = Math.round((availableBalance / card.limit) * 100);
             
             return (
               <div key={card.id} className="group relative">
@@ -219,14 +220,14 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm text-gray-400">Utilization</span>
-                        <span className={`font-semibold ${parseFloat(utilization) < 30 ? 'text-green-400' : 'text-pink-400'}`}>
+                        <span className={`font-semibold ${utilization < 30 ? 'text-green-400' : 'text-pink-400'}`}>
                           {utilization}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-700 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all ${parseFloat(utilization) < 30 ? 'bg-green-500' : 'bg-pink-500'}`}
-                          style={{ width: `${Math.min(parseFloat(utilization), 100)}%` }}
+                          className={`h-2 rounded-full transition-all ${utilization < 30 ? 'bg-green-500' : 'bg-pink-500'}`}
+                          style={{ width: `${Math.min(utilization, 100)}%` }}
                         />
                       </div>
                     </div>

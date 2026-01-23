@@ -1,10 +1,90 @@
+import { useState, useEffect } from 'react';
 import { Settings, User, Bell, Lock, Palette, Mail, Phone } from 'lucide-react';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Switch } from '@/app/components/ui/switch';
 import { Button } from '@/app/components/ui/button';
 
+interface ProfileData {
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+interface NotificationSettings {
+  paymentReminders: boolean;
+  learningProgress: boolean;
+  cardRecommendations: boolean;
+  utilizationAlerts: boolean;
+}
+
+const PROFILE_STORAGE_KEY = 'credzen_profile';
+const NOTIFICATIONS_STORAGE_KEY = 'credzen_notifications';
+
 export function SettingsPage() {
+  const [profile, setProfile] = useState<ProfileData>({
+    fullName: '',
+    email: '',
+    phone: '',
+  });
+
+  const [notifications, setNotifications] = useState<NotificationSettings>({
+    paymentReminders: true,
+    learningProgress: true,
+    cardRecommendations: false,
+    utilizationAlerts: true,
+  });
+
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // Load profile data on component mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+    const savedNotifications = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+
+    if (savedProfile) {
+      try {
+        setProfile(JSON.parse(savedProfile));
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    }
+
+    if (savedNotifications) {
+      try {
+        setNotifications(JSON.parse(savedNotifications));
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    }
+  }, []);
+
+  const handleProfileChange = (field: keyof ProfileData, value: string) => {
+    setProfile(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleNotificationChange = (key: keyof NotificationSettings, value: boolean) => {
+    setNotifications(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleSaveProfile = () => {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    setSaveMessage('Profile saved successfully!');
+    setTimeout(() => setSaveMessage(''), 3000);
+  };
+
+  const handleSaveNotifications = () => {
+    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
+    setSaveMessage('Notification settings saved successfully!');
+    setTimeout(() => setSaveMessage(''), 3000);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header Section */}
@@ -28,12 +108,18 @@ export function SettingsPage() {
           <User className="w-5 h-5 text-purple-400" />
           <h2 className="text-xl font-semibold text-white">Profile Information</h2>
         </div>
+        {saveMessage && (
+          <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-300 text-sm">
+            {saveMessage}
+          </div>
+        )}
         <div className="space-y-4">
           <div>
             <Label htmlFor="fullName" className="text-gray-200">Full Name</Label>
             <Input
               id="fullName"
-              defaultValue="John Doe"
+              value={profile.fullName}
+              onChange={(e) => handleProfileChange('fullName', e.target.value)}
               className="bg-black/30 border-purple-500/50 text-white"
             />
           </div>
@@ -45,7 +131,8 @@ export function SettingsPage() {
                 <Input
                   id="email"
                   type="email"
-                  defaultValue="john.doe@example.com"
+                  value={profile.email}
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
                   className="bg-black/30 border-purple-500/50 text-white pl-10"
                 />
               </div>
@@ -57,13 +144,16 @@ export function SettingsPage() {
                 <Input
                   id="phone"
                   type="tel"
-                  defaultValue="+1 (555) 123-4567"
+                  value={profile.phone}
+                  onChange={(e) => handleProfileChange('phone', e.target.value)}
                   className="bg-black/30 border-purple-500/50 text-white pl-10"
                 />
               </div>
             </div>
           </div>
-          <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+          <Button 
+            onClick={handleSaveProfile}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
             Save Changes
           </Button>
         </div>
@@ -81,29 +171,46 @@ export function SettingsPage() {
               <p className="font-medium text-white">Payment Reminders</p>
               <p className="text-sm text-gray-300">Get notified before payment due dates</p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={notifications.paymentReminders}
+              onCheckedChange={(value) => handleNotificationChange('paymentReminders', value)}
+            />
           </div>
           <div className="flex items-center justify-between p-4 bg-purple-500/20 rounded-xl border border-purple-400/30">
             <div>
               <p className="font-medium text-white">Learning Progress</p>
               <p className="text-sm text-gray-300">Updates on your learning achievements</p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={notifications.learningProgress}
+              onCheckedChange={(value) => handleNotificationChange('learningProgress', value)}
+            />
           </div>
           <div className="flex items-center justify-between p-4 bg-purple-500/20 rounded-xl border border-purple-400/30">
             <div>
               <p className="font-medium text-white">Card Recommendations</p>
               <p className="text-sm text-gray-300">New card suggestions based on your profile</p>
             </div>
-            <Switch />
+            <Switch 
+              checked={notifications.cardRecommendations}
+              onCheckedChange={(value) => handleNotificationChange('cardRecommendations', value)}
+            />
           </div>
           <div className="flex items-center justify-between p-4 bg-purple-500/20 rounded-xl border border-purple-400/30">
             <div>
               <p className="font-medium text-white">Utilization Alerts</p>
               <p className="text-sm text-gray-300">Alerts when utilization exceeds 30%</p>
             </div>
-            <Switch defaultChecked />
+            <Switch 
+              checked={notifications.utilizationAlerts}
+              onCheckedChange={(value) => handleNotificationChange('utilizationAlerts', value)}
+            />
           </div>
+          <Button 
+            onClick={handleSaveNotifications}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white w-full">
+            Save Notification Settings
+          </Button>
         </div>
       </div>
 

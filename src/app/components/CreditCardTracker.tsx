@@ -187,8 +187,8 @@ export function CreditCardTracker({ cards: walletCards = [], onCardsChange, onCa
     }));
   };
 
-  const getUtilizationPercentage = (spend: number, limit: number) => {
-    return limit > 0 ? Math.round((spend / limit) * 100) : 0;
+  const getUtilizationPercentage = (availableBalance: number, limit: number) => {
+    return limit > 0 ? Math.round((availableBalance / limit) * 100) : 0;
   };
 
   const getUtilizationColor = (percentage: number) => {
@@ -347,7 +347,7 @@ export function CreditCardTracker({ cards: walletCards = [], onCardsChange, onCa
           </Card>
         ) : (
           cards.map((card) => {
-            const utilization = getUtilizationPercentage(card.spend, card.limit);
+            const utilization = getUtilizationPercentage(card.balance, card.limit);
             return (
               <Card
                 key={card.id}

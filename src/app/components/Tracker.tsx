@@ -15,8 +15,9 @@ interface TrackerProps {
   onCardsChange?: (cards: Card[]) => void;
   onCardAdded?: (cardName: string) => void;
   onCardDeleted?: (cardName: string) => void;
+  transactions?: any[];
 }
 
-export function Tracker({ cards = [], onCardsChange, onCardAdded, onCardDeleted }: TrackerProps) {
-  return <CreditCardTracker cards={cards} onCardsChange={onCardsChange} onCardAdded={onCardAdded} onCardDeleted={onCardDeleted} />;
+export function Tracker({ cards = [], transactions = [], onCardsChange, onCardAdded, onCardDeleted }: TrackerProps) {
+  return <CreditCardTracker cards={cards} transactions={transactions} onCardsChange={onCardsChange} onCardAdded={onCardAdded} onCardDeleted={onCardDeleted} />;
 }

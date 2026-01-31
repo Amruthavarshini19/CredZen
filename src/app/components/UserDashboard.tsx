@@ -30,15 +30,24 @@ interface Activity {
   timestamp: number;
 }
 
+export interface Transaction {
+  date: string;
+  merchant: string;
+  amount: number;
+  category: string;
+  category_label: string;
+  card: string;
+}
+
 export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps) {
   const [activePage, setActivePage] = useState<'home' | 'learn' | 'smartpick' | 'wallet' | 'tracker' | 'settings'>('home');
-  
+
   // Initialize state with localStorage data
   const [completedLessons, setCompletedLessons] = useState<Set<number>>(() => {
     const saved = localStorage.getItem(`credzen_lessons_${userMobileNumber}`);
     return saved ? new Set(JSON.parse(saved)) : new Set([1, 2]);
   });
-  
+
   const [cards, setCards] = useState<Card[]>(() => {
     const saved = localStorage.getItem(`credzen_cards_${userMobileNumber}`);
     return saved ? JSON.parse(saved) : [
@@ -77,6 +86,31 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Save activities to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`credzen_activities_${userMobileNumber}`, JSON.stringify(activities));
+  }, [activities, userMobileNumber]);
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  const fetchTransactions = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/transactions');
+      if (res.ok) {
+        const data = await res.json();
+        setTransactions(data);
+        addActivity('Synced latest transactions from bank');
+      }
+    } catch (error) {
+      console.error('Failed to fetch transactions', error);
+    }
+  };
+
+  useEffect(() => {
+    // Try fetching on mount in case already connected
+    fetchTransactions();
+  }, []);
+
   // Save completed lessons to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(`credzen_lessons_${userMobileNumber}`, JSON.stringify(Array.from(completedLessons)));
@@ -86,11 +120,6 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
   useEffect(() => {
     localStorage.setItem(`credzen_cards_${userMobileNumber}`, JSON.stringify(cards));
   }, [cards, userMobileNumber]);
-
-  // Save activities to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem(`credzen_activities_${userMobileNumber}`, JSON.stringify(activities));
-  }, [activities, userMobileNumber]);
 
   const handleLogoutClick = () => {
     // Clear any temporary data if needed
@@ -154,68 +183,60 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
             <nav className="space-y-2">
               <button
                 onClick={() => setActivePage('home')}
-                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${
-                  activePage === 'home'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
-                    : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
-                }`}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${activePage === 'home'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                  : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
+                  }`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  activePage === 'home'
-                    ? 'bg-white/20'
-                    : 'bg-purple-500/20'
-                }`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activePage === 'home'
+                  ? 'bg-white/20'
+                  : 'bg-purple-500/20'
+                  }`}>
                   <HomeIcon className="w-5 h-5" />
                 </div>
                 <span className="font-semibold">Home</span>
               </button>
               <button
                 onClick={() => setActivePage('learn')}
-                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${
-                  activePage === 'learn'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
-                    : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
-                }`}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${activePage === 'learn'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                  : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
+                  }`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  activePage === 'learn'
-                    ? 'bg-white/20'
-                    : 'bg-purple-500/20'
-                }`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activePage === 'learn'
+                  ? 'bg-white/20'
+                  : 'bg-purple-500/20'
+                  }`}>
                   <GraduationCap className="w-5 h-5" />
                 </div>
                 <span className="font-semibold">Learn</span>
               </button>
               <button
                 onClick={() => setActivePage('smartpick')}
-                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${
-                  activePage === 'smartpick'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
-                    : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
-                }`}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${activePage === 'smartpick'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                  : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
+                  }`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  activePage === 'smartpick'
-                    ? 'bg-white/20'
-                    : 'bg-purple-500/20'
-                }`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activePage === 'smartpick'
+                  ? 'bg-white/20'
+                  : 'bg-purple-500/20'
+                  }`}>
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <span className="font-semibold">Smart Pick</span>
               </button>
               <button
                 onClick={() => setActivePage('tracker')}
-                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${
-                  activePage === 'tracker'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
-                    : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
-                }`}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${activePage === 'tracker'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                  : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
+                  }`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  activePage === 'tracker'
-                    ? 'bg-white/20'
-                    : 'bg-purple-500/20'
-                }`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activePage === 'tracker'
+                  ? 'bg-white/20'
+                  : 'bg-purple-500/20'
+                  }`}>
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <span className="font-semibold">Tracker</span>
@@ -226,7 +247,7 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
 
         {/* Main Content Area */}
         <main className="flex-1 p-8">
-          {activePage === 'home' && <Home onNavigate={(page: 'learn' | 'smartpick' | 'wallet') => setActivePage(page)} completedLessons={completedLessons} cards={cards} activities={activities} />}
+          {activePage === 'home' && <Home onNavigate={(page: 'learn' | 'smartpick' | 'wallet') => setActivePage(page)} completedLessons={completedLessons} cards={cards} activities={activities} onPlaidConnected={fetchTransactions} />}
           {activePage === 'learn' && <Learn completedLessons={completedLessons} onLessonsChange={(lessons: Set<number>) => {
             setCompletedLessons(lessons);
           }} onLessonComplete={(message: string) => {
@@ -240,7 +261,7 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
           }} onCardDeleted={(message: string) => {
             addActivity(message);
           }} />}
-          {activePage === 'tracker' && <Tracker cards={cards} onCardsChange={(updatedCards: Card[]) => {
+          {activePage === 'tracker' && <Tracker cards={cards} transactions={transactions} onCardsChange={(updatedCards: Card[]) => {
             setCards(updatedCards);
           }} onCardAdded={(message: string) => {
             addActivity(message);

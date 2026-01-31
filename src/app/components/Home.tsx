@@ -1,4 +1,5 @@
 import { CreditCard, Brain, TrendingUp, Award, CheckCircle2 } from 'lucide-react';
+import { PlaidConnect } from './PlaidConnect';
 import { lessonsData } from './lessonData';
 
 interface Card {
@@ -22,9 +23,10 @@ interface HomeProps {
   completedLessons?: Set<number>;
   cards?: Card[];
   activities?: Activity[];
+  onPlaidConnected?: () => void;
 }
 
-export function Home({ onNavigate, completedLessons = new Set(), cards = [], activities = [] }: HomeProps) {
+export function Home({ onNavigate, completedLessons = new Set(), cards = [], activities = [], onPlaidConnected }: HomeProps) {
   // Calculate learning progress based on completed lessons
   const totalXP = Array.from(completedLessons).reduce((sum, lessonId) => {
     const lesson = lessonsData.find(l => l.id === lessonId);
@@ -76,8 +78,8 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
           Your intelligent platform for credit card learning and management
         </p>
         <p className="text-gray-300 leading-relaxed">
-          CredZen helps you master credit card management through interactive learning modules, 
-          smart AI-powered recommendations, and comprehensive card tracking. Build your financial 
+          CredZen helps you master credit card management through interactive learning modules,
+          smart AI-powered recommendations, and comprehensive card tracking. Build your financial
           literacy, optimize your rewards, and make informed decisions about credit cards.
         </p>
       </div>
@@ -106,17 +108,21 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
         <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/30">
           <h2 className="text-2xl font-semibold text-white mb-4">Quick Actions</h2>
           <div className="space-y-3">
-            <button 
+            <button
               onClick={() => onNavigate?.('learn')}
               className="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg cursor-pointer">
               Continue Learning
             </button>
-            <button 
+            <PlaidConnect
+              onConnected={onPlaidConnected}
+              className="w-full justify-start px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 transition-all shadow-lg cursor-pointer h-auto text-base font-normal"
+            />
+            <button
               onClick={() => onNavigate?.('smartpick')}
               className="w-full text-left px-4 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg cursor-pointer">
               View Card Recommendations
             </button>
-            <button 
+            <button
               onClick={() => onNavigate?.('wallet')}
               className="w-full text-left px-4 py-3 rounded-xl border-2 border-purple-400 text-gray-200 hover:bg-purple-500/20 transition-all cursor-pointer">
               Manage Cards

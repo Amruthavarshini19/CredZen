@@ -22,7 +22,8 @@ const config = new Configuration({
 
 const plaidClient = new PlaidApi(config);
 
-let ACCESS_TOKEN = null;
+// Changed to array to support multiple accounts
+let ACCESS_TOKENS = [];
 
 app.post('/create_link_token', async (req, res) => {
   try {
@@ -45,8 +46,14 @@ app.post('/exchange_public_token', async (req, res) => {
     const { public_token } = req.body;
     if (!public_token) return res.status(400).json({ error: 'public_token is required' });
     const response = await plaidClient.itemPublicTokenExchange({ public_token });
-    ACCESS_TOKEN = response.data.access_token;
-    res.json({ success: true });
+
+    // Check if token already exists
+    const accessToken = response.data.access_token;
+    if (!ACCESS_TOKENS.includes(accessToken)) {
+      ACCESS_TOKENS.push(accessToken);
+    }
+
+    res.json({ success: true, count: ACCESS_TOKENS.length });
   } catch (err) {
     console.error('exchange_public_token error', err);
     res.status(500).json({ error: err?.response?.data || err.message || String(err) });
@@ -55,32 +62,11 @@ app.post('/exchange_public_token', async (req, res) => {
 
 app.get('/transactions', async (req, res) => {
   try {
-    if (!ACCESS_TOKEN) return res.status(404).json({ error: 'No access token. Connect a bank first.' });
+    if (ACCESS_TOKENS.length === 0) return res.status(404).json({ error: 'No access tokens. Connect a bank first.' });
 
-    // 1️⃣ Get accounts (cards)
-    const accountsRes = await plaidClient.accountsGet({ access_token: ACCESS_TOKEN });
+    let allTransactions = [];
 
-    // 2️⃣ Pick only credit accounts
-    const creditCards = (accountsRes.data.accounts || []).filter(acc => acc.type === 'credit');
-
-    // (OPTIONAL) Limit to only 3 cards
-    const allowedAccountIds = creditCards.slice(0, 3).map(a => a.account_id);
-
-    // 3️⃣ Get transactions for date range requested
-    const txRes = await plaidClient.transactionsGet({
-      access_token: ACCESS_TOKEN,
-      start_date: '2025-01-01',
-      end_date: '2026-01-31',
-      options: { count: 500, offset: 0 },
-    });
-
-    // 4️⃣ Map account_id -> card name
-    const accountMap = {};
-    creditCards.forEach(acc => {
-      accountMap[acc.account_id] = acc.name;
-    });
-
-    // helper: normalize/label category
+    // Helper: normalize/label category
     function normalizeCategory(rawCategory, merchant) {
       const rc = (rawCategory || '').toString();
       const rcUpper = rc.toUpperCase();
@@ -105,25 +91,70 @@ app.get('/transactions', async (req, res) => {
       return { raw: rawCategory || 'OTHER', label: (rawCategory || 'Other').toString().replaceAll('_', ' ').toLowerCase(), key: rawCategory || 'OTHER' };
     }
 
-    // 5️⃣ Filter + format transactions (only from allowed cards)
-    const formatted = (txRes.data.transactions || [])
-      .filter(tx => allowedAccountIds.includes(tx.account_id))
-      .map(tx => {
-        const merchant = tx.merchant_name || tx.name || '';
-        const rawCat = tx.personal_finance_category?.primary || tx.category?.[0] || '';
-        const norm = normalizeCategory(rawCat, merchant);
-        return {
-          date: tx.date,
-          merchant,
-          amount: tx.amount,
-          category: norm.raw || 'other',
-          category_label: norm.label,
-          category_key: norm.key,
-          card: accountMap[tx.account_id] || 'Unknown Card',
-        };
+    // Iterate over all tokens
+    for (const token of ACCESS_TOKENS) {
+      // 1️⃣ Get accounts (cards)
+      const accountsRes = await plaidClient.accountsGet({ access_token: token });
+
+      // 1.5️⃣ Get Institution Name (Bank)
+      let institutionName = '';
+      try {
+        const itemRes = await plaidClient.itemGet({ access_token: token });
+        const instId = itemRes.data.item.institution_id;
+        if (instId) {
+          const instRes = await plaidClient.institutionsGetById({ institution_id: instId, country_codes: ['US'] });
+          institutionName = instRes.data.institution.name;
+        }
+      } catch (err) {
+        console.error('Failed to get institution', err.message);
+      }
+
+      // 2️⃣ Pick only credit accounts
+      const creditCards = (accountsRes.data.accounts || []).filter(acc => acc.type === 'credit');
+      const allowedAccountIds = creditCards.slice(0, 3).map(a => a.account_id);
+
+      if (allowedAccountIds.length === 0) continue;
+
+      // 3️⃣ Get transactions
+      const txRes = await plaidClient.transactionsGet({
+        access_token: token,
+        start_date: '2025-01-01',
+        end_date: '2026-01-31',
+        options: { count: 500, offset: 0 },
       });
 
-    res.json(formatted);
+      // 4️⃣ Map account_id -> card name
+      const accountMap = {};
+      creditCards.forEach(acc => {
+        const prefix = institutionName ? `${institutionName} - ` : '';
+        accountMap[acc.account_id] = `${prefix}${acc.name} (${acc.mask || 'xxxx'})`;
+      });
+
+      // 5️⃣ Filter + format transactions
+      const formatted = (txRes.data.transactions || [])
+        .filter(tx => allowedAccountIds.includes(tx.account_id))
+        .map(tx => {
+          const merchant = tx.merchant_name || tx.name || '';
+          const rawCat = tx.personal_finance_category?.primary || tx.category?.[0] || '';
+          const norm = normalizeCategory(rawCat, merchant);
+          return {
+            date: tx.date,
+            merchant,
+            amount: tx.amount,
+            category: norm.raw || 'other',
+            category_label: norm.label,
+            category_key: norm.key,
+            card: accountMap[tx.account_id] || 'Unknown Card',
+          };
+        });
+
+      allTransactions = [...allTransactions, ...formatted];
+    }
+
+    // Sort combined transactions by date
+    allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json(allTransactions);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch transactions' });

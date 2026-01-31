@@ -31,9 +31,10 @@ interface CreditCardTrackerProps {
   onCardsChange?: (cards: WalletCard[]) => void;
   onCardAdded?: (cardName: string) => void;
   onCardDeleted?: (cardName: string) => void;
+  transactions?: any[];
 }
 
-export function CreditCardTracker({ cards: walletCards = [], onCardsChange, onCardAdded, onCardDeleted }: CreditCardTrackerProps) {
+export function CreditCardTracker({ cards: walletCards = [], transactions = [], onCardsChange, onCardAdded, onCardDeleted }: CreditCardTrackerProps) {
   const [cards, setCards] = useState<CreditCardData[]>([
     {
       id: '1',
@@ -120,14 +121,14 @@ export function CreditCardTracker({ cards: walletCards = [], onCardsChange, onCa
       setCards(cards.map(card =>
         card.id === isEditingId
           ? {
-              ...card,
-              cardName: formData.cardName || card.cardName,
-              cardNumber: formData.cardNumber || card.cardNumber,
-              lastFourDigits: lastFourDigits,
-              limit: formData.limit || card.limit,
-              spend: formData.spend || card.spend,
-              balance: formData.balance || card.balance,
-            }
+            ...card,
+            cardName: formData.cardName || card.cardName,
+            cardNumber: formData.cardNumber || card.cardNumber,
+            lastFourDigits: lastFourDigits,
+            limit: formData.limit || card.limit,
+            spend: formData.spend || card.spend,
+            balance: formData.balance || card.balance,
+          }
           : card
       ));
     } else {
@@ -165,14 +166,14 @@ export function CreditCardTracker({ cards: walletCards = [], onCardsChange, onCa
     if (confirm('Are you sure you want to delete this card?')) {
       // Find the card being deleted to get its name
       const cardToDelete = cards.find(card => card.id === id);
-      
+
       const updatedCards = cards.filter(card => card.id !== id);
       setCards(updatedCards);
-      
+
       // Sync to wallet
       const updatedWalletCards = walletCards.filter(card => card.id.toString() !== id);
       onCardsChange?.(updatedWalletCards);
-      
+
       // Notify parent about deletion for activity tracking
       if (cardToDelete) {
         onCardDeleted?.(`Deleted card: ${cardToDelete.cardName}`);
@@ -461,6 +462,47 @@ export function CreditCardTracker({ cards: walletCards = [], onCardsChange, onCa
           </div>
         </Card>
       )}
+      {/* Transactions List */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold text-white">Recent Transactions</h2>
+        {transactions.length === 0 ? (
+          <Card className="bg-purple-900/40 border-purple-500/30 p-8 text-center text-gray-400">
+            No transactions found. Connect your bank to see activity.
+          </Card>
+        ) : (
+          <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-purple-500/30 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-700/50 bg-gray-900/50">
+                    <th className="p-4 text-sm font-medium text-gray-400">Date</th>
+                    <th className="p-4 text-sm font-medium text-gray-400">Merchant</th>
+                    <th className="p-4 text-sm font-medium text-gray-400">Category</th>
+                    <th className="p-4 text-sm font-medium text-gray-400">Card</th>
+                    <th className="p-4 text-sm font-medium text-gray-400 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map((tx, i) => (
+                    <tr key={i} className="border-b border-gray-700/50 hover:bg-gray-800/50 transition-colors">
+                      <td className="p-4 text-white text-sm">{tx.date}</td>
+                      <td className="p-4 text-white font-medium">{tx.merchant}</td>
+                      <td className="p-4 text-gray-300 text-sm">
+                        <span className="inline-block px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs">
+                          {tx.category_label}
+                        </span>
+                      </td>
+                      <td className="p-4 text-gray-300 text-sm">{tx.card}</td>
+                      <td className="p-4 text-white font-bold text-right">₹{tx.amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+      </div>
+
     </div>
   );
 }

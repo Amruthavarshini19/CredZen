@@ -91,6 +91,24 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
     return diffDays;
   };
 
+  // NEW: Billing Reminders Function
+  const checkBillingReminders = (): string[] => {
+    const reminders: string[] = [];
+    cards.forEach(card => {
+      const daysRemaining = getDaysRemaining(card.dueDay);
+      if (daysRemaining >= 0 && daysRemaining <= 5) {
+        if (daysRemaining === 0) {
+          reminders.push(`🚨 PAYMENT DUE TODAY: ${card.name} (Ending in ${card.lastFour})`);
+        } else {
+          reminders.push(`⏰ Upcoming Due Date: ${card.name} in ${daysRemaining} day${daysRemaining > 1 ? 's' : ''}`);
+        }
+      }
+    });
+    return reminders;
+  };
+
+  const reminderMessages = checkBillingReminders();
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
@@ -135,6 +153,18 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
           <h2 className="text-2xl font-semibold text-white">Billing Cycles</h2>
         </div>
 
+        {/* Reminder Messages Section */}
+        {reminderMessages.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {reminderMessages.map((msg, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-100 text-sm font-medium animate-pulse">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>{msg}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {cards.map((card) => {
             const daysRemaining = getDaysRemaining(card.dueDay);
@@ -158,15 +188,15 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-3">
-                  <div>
-                    <p className="text-xs text-gray-400">Billing Date</p>
-                    <p className="text-sm font-medium text-white">{card.billingDay}th / mo</p>
+                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-white/10">
+                  <div className="bg-purple-500/10 p-2 rounded-lg text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-purple-300 mb-1">Billing Date</p>
+                    <p className="text-sm font-bold text-white">{card.billingDay}th <span className="text-[10px] font-normal text-gray-400">/ mo</span></p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">Due Date</p>
-                    <p className={`text-sm font-bold ${isDueSoon ? 'text-red-300' : 'text-blue-300'}`}>
-                      {card.dueDay}th / mo
+                  <div className="bg-blue-500/10 p-2 rounded-lg text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-blue-300 mb-1">Due Date</p>
+                    <p className={`text-sm font-bold ${isDueSoon ? 'text-red-400' : 'text-blue-200'}`}>
+                      {card.dueDay}th <span className="text-[10px] font-normal text-gray-400">/ mo</span>
                     </p>
                   </div>
                 </div>

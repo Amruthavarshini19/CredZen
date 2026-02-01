@@ -14,6 +14,8 @@ interface WalletCard {
   limit: number;
   balance: number;
   color: string;
+  billingDay: number;
+  dueDay: number;
 }
 
 interface CreditCardData {
@@ -35,31 +37,12 @@ interface CreditCardTrackerProps {
 }
 
 export function CreditCardTracker({ cards: walletCards = [], transactions = [], onCardsChange, onCardAdded, onCardDeleted }: CreditCardTrackerProps) {
-  const [cards, setCards] = useState<CreditCardData[]>([
-    {
-      id: '1',
-      cardName: 'Chase Sapphire Preferred',
-      cardNumber: '4532xxxxxxxx1234',
-      lastFourDigits: '1234',
-      limit: 50000,
-      spend: 18500,
-      balance: 31500
-    },
-    {
-      id: '2',
-      cardName: 'American Express Gold',
-      cardNumber: '3782xxxxxxxx2234',
-      lastFourDigits: '2234',
-      limit: 75000,
-      spend: 42300,
-      balance: 32700
-    }
-  ]);
+  const [cards, setCards] = useState<CreditCardData[]>([]);
 
   // Sync wallet cards into tracker display
   useEffect(() => {
     if (walletCards && walletCards.length > 0) {
-      const trackerCards = walletCards.map((card, index) => ({
+      const trackerCards = walletCards.map((card) => ({
         id: card.id.toString(),
         cardName: card.name,
         cardNumber: `****${card.lastFour}`,
@@ -118,7 +101,7 @@ export function CreditCardTracker({ cards: walletCards = [], transactions = [], 
 
     if (isEditingId) {
       // Edit existing card
-      setCards(cards.map(card =>
+      const updatedCards = cards.map(card =>
         card.id === isEditingId
           ? {
             ...card,
@@ -127,35 +110,53 @@ export function CreditCardTracker({ cards: walletCards = [], transactions = [], 
             lastFourDigits: lastFourDigits,
             limit: formData.limit || card.limit,
             spend: formData.spend || card.spend,
-            balance: formData.balance || card.balance,
+            balance: (formData.limit || card.limit) - (formData.spend || card.spend),
           }
           : card
-      ));
+      );
+      setCards(updatedCards);
+
+      // Sync to wallet
+      const updatedWalletCards = walletCards.map(card =>
+        card.id.toString() === isEditingId
+          ? {
+            ...card,
+            name: formData.cardName || card.name,
+            lastFour: lastFourDigits,
+            limit: formData.limit || card.limit,
+            balance: formData.spend || card.balance,
+          }
+          : card
+      );
+      onCardsChange?.(updatedWalletCards);
     } else {
       // Add new card
+      const newCardId = Date.now().toString();
       const newCard: CreditCardData = {
-        id: Date.now().toString(),
+        id: newCardId,
         cardName: formData.cardName || 'Unnamed Card',
         cardNumber: formData.cardNumber || '',
         lastFourDigits: lastFourDigits,
         limit: formData.limit || 0,
         spend: formData.spend || 0,
-        balance: formData.balance || 0,
+        balance: (formData.limit || 0) - (formData.spend || 0),
       };
-      const updatedCards = [...cards, newCard];
-      setCards(updatedCards);
+      setCards([...cards, newCard]);
 
       // Sync to wallet
       const newWalletCard: WalletCard = {
-        id: parseInt(newCard.id),
+        id: parseInt(newCardId),
         name: newCard.cardName,
         lastFour: lastFourDigits,
         type: 'Visa',
         limit: newCard.limit,
         balance: newCard.spend,
-        color: 'from-blue-500 to-blue-700'
+        color: 'from-blue-500 to-blue-700',
+        billingDay: 15, // Default
+        dueDay: 5      // Default
       };
       onCardsChange?.([...walletCards, newWalletCard]);
+      onCardAdded?.(`Added new card: ${newCard.cardName}`);
     }
 
     setIsAddDialogOpen(false);
@@ -164,9 +165,7 @@ export function CreditCardTracker({ cards: walletCards = [], transactions = [], 
 
   const handleDeleteCard = (id: string) => {
     if (confirm('Are you sure you want to delete this card?')) {
-      // Find the card being deleted to get its name
       const cardToDelete = cards.find(card => card.id === id);
-
       const updatedCards = cards.filter(card => card.id !== id);
       setCards(updatedCards);
 
@@ -174,12 +173,12 @@ export function CreditCardTracker({ cards: walletCards = [], transactions = [], 
       const updatedWalletCards = walletCards.filter(card => card.id.toString() !== id);
       onCardsChange?.(updatedWalletCards);
 
-      // Notify parent about deletion for activity tracking
       if (cardToDelete) {
         onCardDeleted?.(`Deleted card: ${cardToDelete.cardName}`);
       }
     }
   };
+
 
   const toggleCardNumberVisibility = (id: string) => {
     setShowCardNumbers(prev => ({

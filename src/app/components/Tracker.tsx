@@ -8,6 +8,8 @@ interface Card {
   limit: number;
   balance: number;
   color: string;
+  billingDay: number;
+  dueDay: number;
 }
 
 interface TrackerProps {

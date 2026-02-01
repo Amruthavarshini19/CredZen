@@ -58,7 +58,41 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
 
   const [cards, setCards] = useState<Card[]>(() => {
     const saved = localStorage.getItem(`credzen_cards_${userMobileNumber}`);
-    return saved ? JSON.parse(saved) : [
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Ensure all cards have billingDay and dueDay (migration logic)
+      return parsed.map((card: any, index: number) => {
+        let b = card.billingDay;
+        let d = card.dueDay;
+
+        // Force specific dates requested by user if names match
+        if (card.name.toLowerCase().includes('chase')) { b = 15; d = 25; }
+        else if (card.name.toLowerCase().includes('american express')) { b = 23; d = 2; }
+        else if (card.name.toLowerCase().includes('capital one')) { b = 4; d = 16; }
+        else if (card.name.toLowerCase().includes('sbi')) { b = 5; d = 10; }
+
+        // Provide varied default dates based on index if still missing
+        if (b === undefined || d === undefined) {
+          const variations = [
+            { b: 15, d: 25 },
+            { b: 23, d: 2 },
+            { b: 4, d: 16 },
+            { b: 5, d: 10 },
+            { b: 28, d: 23 }
+          ];
+          const v = variations[index % variations.length];
+          b = b ?? v.b;
+          d = d ?? v.d;
+        }
+
+        return {
+          ...card,
+          billingDay: b,
+          dueDay: d
+        };
+      });
+    }
+    return [
       {
         id: 1,
         name: 'Chase Sapphire Preferred',
@@ -67,8 +101,8 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
         limit: 5000,
         balance: 1200,
         color: 'from-blue-500 to-blue-700',
-        billingDay: 12,
-        dueDay: 3 // Warning generator (assuming early month)
+        billingDay: 15,
+        dueDay: 25
       },
       {
         id: 2,
@@ -78,8 +112,8 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
         limit: 10000,
         balance: 850,
         color: 'from-yellow-500 to-orange-600',
-        billingDay: 28,
-        dueDay: 15
+        billingDay: 23,
+        dueDay: 2
       },
       {
         id: 3,
@@ -89,8 +123,19 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
         limit: 3000,
         balance: 0,
         color: 'from-gray-600 to-gray-800',
-        billingDay: 1,
-        dueDay: 20
+        billingDay: 4,
+        dueDay: 16
+      },
+      {
+        id: 4,
+        name: 'SBI Card',
+        lastFour: '9012',
+        type: 'Visa',
+        limit: 2000,
+        balance: 450,
+        color: 'from-blue-700 to-blue-900',
+        billingDay: 5,
+        dueDay: 10
       }
     ];
   });
@@ -307,8 +352,8 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
             addActivity(message);
           }} />}
           {activePage === 'settings' && <SettingsPage />}
-        </main>
-      </div>
-    </div>
+        </main >
+      </div >
+    </div >
   );
 }

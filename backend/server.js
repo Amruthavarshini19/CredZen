@@ -162,6 +162,9 @@ app.get('/transactions', async (req, res) => {
   }
 });
 
+
+
+
 app.post('/api/smart-pick/analyze', async (req, res) => {
   try {
     const { transactions } = req.body;

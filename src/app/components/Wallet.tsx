@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreditCard, Plus, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
@@ -13,6 +13,8 @@ interface Card {
   limit: number;
   balance: number;
   color: string;
+  billingDay: number;
+  dueDay: number;
 }
 
 interface WalletProps {
@@ -23,43 +25,22 @@ interface WalletProps {
 }
 
 export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, onCardDeleted }: WalletProps) {
+  const [cards, setCards] = useState<Card[]>(initialCards);
   const [showAddCard, setShowAddCard] = useState(false);
   const [showCardNumbers, setShowCardNumbers] = useState<{ [key: number]: boolean }>({});
-  const [cards, setCards] = useState<Card[]>(initialCards.length > 0 ? initialCards : [
-    {
-      id: 1,
-      name: 'Chase Sapphire Preferred',
-      lastFour: '4532',
-      type: 'Visa',
-      limit: 5000,
-      balance: 1200,
-      color: 'from-blue-500 to-blue-700'
-    },
-    {
-      id: 2,
-      name: 'American Express Gold',
-      lastFour: '8765',
-      type: 'Amex',
-      limit: 10000,
-      balance: 850,
-      color: 'from-yellow-500 to-orange-600'
-    },
-    {
-      id: 3,
-      name: 'Capital One Quicksilver',
-      lastFour: '2341',
-      type: 'Mastercard',
-      limit: 3000,
-      balance: 0,
-      color: 'from-gray-600 to-gray-800'
-    }
-  ]);
+
+  // Sync with prop changes
+  useEffect(() => {
+    setCards(initialCards);
+  }, [initialCards]);
 
   const [newCard, setNewCard] = useState({
     name: '',
     number: '',
     type: '',
-    limit: ''
+    limit: '',
+    billingDay: '15',
+    dueDay: '5'
   });
 
   const toggleCardNumber = (cardId: number) => {
@@ -69,30 +50,36 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
     }));
   };
 
-  const handleAddCard = () => {
+  const handleAddCard = async () => {
     if (newCard.name && newCard.number && newCard.limit) {
       const lastFour = newCard.number.slice(-4);
       const newCardData: Card = {
-        id: cards.length + 1,
+        id: Date.now(),
         name: newCard.name,
         lastFour: lastFour,
         type: newCard.type || 'Visa',
         limit: parseInt(newCard.limit),
         balance: 0,
-        color: 'from-purple-500 to-purple-700'
+        color: 'from-purple-500 to-purple-700',
+        billingDay: parseInt(newCard.billingDay),
+        dueDay: parseInt(newCard.dueDay)
       };
+
       const updatedCards = [...cards, newCardData];
       setCards(updatedCards);
       onCardsChange?.(updatedCards);
       onCardAdded?.(`Added new card: ${newCard.name}`);
-      setNewCard({ name: '', number: '', type: '', limit: '' });
+
+      setNewCard({ name: '', number: '', type: '', limit: '', billingDay: '15', dueDay: '5' });
       setShowAddCard(false);
     }
   };
 
-  const handleDeleteCard = (cardId: number) => {
-    const cardToDelete = cards.find(card => card.id === cardId);
-    const updatedCards = cards.filter(card => card.id !== cardId);
+  const handleDeleteCard = async (cardId: number) => {
+    if (!confirm('Are you sure you want to delete this card?')) return;
+
+    const cardToDelete = cards.find(c => c.id === cardId);
+    const updatedCards = cards.filter(c => c.id !== cardId);
     setCards(updatedCards);
     onCardsChange?.(updatedCards);
     if (cardToDelete) {
@@ -102,12 +89,13 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
 
   const totalLimit = cards.reduce((sum, card) => sum + card.limit, 0);
   const totalAvailableBalance = cards.reduce((sum, card) => sum + (card.limit - card.balance), 0);
-  const overallUtilization = totalLimit > 0 ? Math.round((totalAvailableBalance / totalLimit) * 100) : 0;
+  const overallUtilization = totalLimit > 0 ? Math.round(((totalLimit - totalAvailableBalance) / totalLimit) * 100) : 0;
+
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" >
       {/* Header Section */}
-      <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/30">
+      < div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/30" >
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -128,10 +116,10 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
         <p className="text-lg text-gray-300">
           Manage your credit cards and track your spending
         </p>
-      </div>
+      </div >
 
       {/* Summary Stats */}
-      <div className="grid md:grid-cols-3 gap-4">
+      < div className="grid md:grid-cols-3 gap-4" >
         <div className="bg-purple-900/40 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
           <p className="text-sm text-gray-400 mb-2">Total Cards</p>
           <p className="text-3xl font-bold text-white">{cards.length}</p>
@@ -147,17 +135,17 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
             {overallUtilization < 30 ? 'Excellent!' : 'Consider reducing'}
           </p>
         </div>
-      </div>
+      </div >
 
       {/* Cards Grid */}
-      <div className="space-y-6">
+      < div className="space-y-6" >
         <h2 className="text-2xl font-semibold text-white">Your Cards</h2>
-        
+
         <div className="grid md:grid-cols-2 gap-6">
           {cards.map((card) => {
             const availableBalance = card.limit - card.balance;
             const utilization = Math.round((availableBalance / card.limit) * 100);
-            
+
             return (
               <div key={card.id} className="group relative">
                 {/* Credit Card Visual */}
@@ -237,10 +225,10 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
             );
           })}
         </div>
-      </div>
+      </div >
 
       {/* Add Card Dialog */}
-      <Dialog open={showAddCard} onOpenChange={setShowAddCard}>
+      < Dialog open={showAddCard} onOpenChange={setShowAddCard} >
         <DialogContent className="bg-gradient-to-br from-gray-900 to-purple-900 border-purple-500/50">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-white">Add New Card</DialogTitle>
@@ -284,11 +272,35 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
               <Input
                 id="creditLimit"
                 type="number"
-                placeholder="5000"
+                placeholder="₹5,000"
                 value={newCard.limit}
                 onChange={(e) => setNewCard({ ...newCard, limit: e.target.value })}
                 className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="billingDay" className="text-gray-200">Billing Day</Label>
+                <Input
+                  id="billingDay"
+                  type="number"
+                  placeholder="15"
+                  value={newCard.billingDay}
+                  onChange={(e) => setNewCard({ ...newCard, billingDay: e.target.value })}
+                  className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dueDay" className="text-gray-200">Due Day</Label>
+                <Input
+                  id="dueDay"
+                  type="number"
+                  placeholder="5"
+                  value={newCard.dueDay}
+                  onChange={(e) => setNewCard({ ...newCard, dueDay: e.target.value })}
+                  className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
+                />
+              </div>
             </div>
             <Button
               onClick={handleAddCard}
@@ -299,7 +311,7 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 }

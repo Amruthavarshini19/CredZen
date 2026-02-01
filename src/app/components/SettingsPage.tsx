@@ -151,7 +151,7 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
-          <Button 
+          <Button
             onClick={handleSaveProfile}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
             Save Changes
@@ -171,7 +171,7 @@ export function SettingsPage() {
               <p className="font-medium text-white">Payment Reminders</p>
               <p className="text-sm text-gray-300">Get notified before payment due dates</p>
             </div>
-            <Switch 
+            <Switch
               checked={notifications.paymentReminders}
               onCheckedChange={(value) => handleNotificationChange('paymentReminders', value)}
             />
@@ -181,7 +181,7 @@ export function SettingsPage() {
               <p className="font-medium text-white">Learning Progress</p>
               <p className="text-sm text-gray-300">Updates on your learning achievements</p>
             </div>
-            <Switch 
+            <Switch
               checked={notifications.learningProgress}
               onCheckedChange={(value) => handleNotificationChange('learningProgress', value)}
             />
@@ -191,7 +191,7 @@ export function SettingsPage() {
               <p className="font-medium text-white">Card Recommendations</p>
               <p className="text-sm text-gray-300">New card suggestions based on your profile</p>
             </div>
-            <Switch 
+            <Switch
               checked={notifications.cardRecommendations}
               onCheckedChange={(value) => handleNotificationChange('cardRecommendations', value)}
             />
@@ -201,12 +201,12 @@ export function SettingsPage() {
               <p className="font-medium text-white">Utilization Alerts</p>
               <p className="text-sm text-gray-300">Alerts when utilization exceeds 30%</p>
             </div>
-            <Switch 
+            <Switch
               checked={notifications.utilizationAlerts}
               onCheckedChange={(value) => handleNotificationChange('utilizationAlerts', value)}
             />
           </div>
-          <Button 
+          <Button
             onClick={handleSaveNotifications}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white w-full">
             Save Notification Settings
@@ -297,6 +297,24 @@ export function SettingsPage() {
       <div className="bg-red-900/30 backdrop-blur-sm rounded-2xl p-6 border border-red-500/30">
         <h2 className="text-xl font-semibold text-red-400 mb-4">Danger Zone</h2>
         <div className="space-y-3">
+          <div className="flex items-center justify-between p-4 bg-red-500/20 rounded-xl border border-red-400/30">
+            <div>
+              <p className="font-medium text-white">Reset App Data</p>
+              <p className="text-sm text-gray-300">Clear all saved cards, activities, and settings</p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+                  localStorage.clear();
+                  window.location.reload();
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Reset
+            </Button>
+          </div>
           <div className="flex items-center justify-between p-4 bg-red-500/20 rounded-xl border border-red-400/30">
             <div>
               <p className="font-medium text-white">Delete Account</p>

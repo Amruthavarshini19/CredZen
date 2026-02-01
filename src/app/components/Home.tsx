@@ -1,4 +1,4 @@
-import { CreditCard, Brain, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Brain, CheckCircle2, Calendar, AlertTriangle, Award, TrendingUp } from 'lucide-react';
 import { PlaidConnect } from './PlaidConnect';
 import { lessonsData } from './lessonData';
 
@@ -10,6 +10,8 @@ interface Card {
   limit: number;
   balance: number;
   color: string;
+  billingDay: number;
+  dueDay: number;
 }
 
 interface Activity {
@@ -38,7 +40,9 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
 
   const stats = [
     { label: 'Learning Progress', value: `${Math.round(learningProgressPercent)}%`, icon: <Brain className="w-5 h-5" /> },
-    { label: 'Cards Managed', value: cards.length.toString(), icon: <CreditCard className="w-5 h-5" /> }
+    { label: 'Cards Managed', value: cards.length.toString(), icon: <CreditCard className="w-5 h-5" /> },
+    { label: 'Rewards Earned', value: '₹248', icon: <Award className="w-5 h-5" /> },
+    { label: 'Credit Score', value: '742', icon: <TrendingUp className="w-5 h-5" /> }
   ];
 
   // Format time difference
@@ -64,6 +68,28 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
       title: activity.title,
       time: formatTimeAgo(activity.timestamp)
     }));
+
+  // Logic to calculate days remaining
+  const getDaysRemaining = (dueDay: number) => {
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    // Create a date object for the due day in component's logic
+    let dueDate = new Date(currentYear, currentMonth, dueDay);
+
+    // If due day has passed this month, assume it's next month
+    if (currentDay > dueDay) {
+      dueDate = new Date(currentYear, currentMonth + 1, dueDay);
+    }
+
+    // Calculate difference in days
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays;
+  };
 
   return (
     <div className="space-y-8">
@@ -98,6 +124,62 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
             <p className="text-3xl font-bold text-white">{stat.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Billing Cycle Section - New Feature */}
+      <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/30">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
+            <Calendar className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-2xl font-semibold text-white">Billing Cycles</h2>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {cards.map((card) => {
+            const daysRemaining = getDaysRemaining(card.dueDay);
+            const isDueSoon = daysRemaining <= 2 && daysRemaining >= 0;
+
+            return (
+              <div key={card.id} className={`p-4 rounded-xl border transition-all ${isDueSoon
+                ? 'bg-red-500/10 border-red-500/50'
+                : 'bg-white/5 border-purple-500/20'
+                }`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-semibold text-white">{card.name}</h3>
+                    <p className="text-xs text-gray-400">{card.lastFour}</p>
+                  </div>
+                  {isDueSoon && (
+                    <div className="flex items-center gap-1 text-red-400 bg-red-500/20 px-2 py-1 rounded-full">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span className="text-xs font-bold">Due Soon</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div>
+                    <p className="text-xs text-gray-400">Billing Date</p>
+                    <p className="text-sm font-medium text-white">{card.billingDay}th / mo</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">Due Date</p>
+                    <p className={`text-sm font-bold ${isDueSoon ? 'text-red-300' : 'text-blue-300'}`}>
+                      {card.dueDay}th / mo
+                    </p>
+                  </div>
+                </div>
+
+                {isDueSoon && (
+                  <p className="mt-2 text-xs text-red-300 text-center font-medium bg-red-900/20 py-1 rounded">
+                    Payment due in {daysRemaining === 0 ? 'today' : `${daysRemaining} days`}!
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Two Column Layout */}

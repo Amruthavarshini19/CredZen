@@ -23,6 +23,8 @@ interface Card {
   limit: number;
   balance: number;
   color: string;
+  billingDay: number; // Day of the month (e.g., 15)
+  dueDay: number;    // Day of the month (e.g., 5)
 }
 
 interface Activity {
@@ -64,7 +66,9 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
         type: 'Visa',
         limit: 5000,
         balance: 1200,
-        color: 'from-blue-500 to-blue-700'
+        color: 'from-blue-500 to-blue-700',
+        billingDay: 12,
+        dueDay: 3 // Warning generator (assuming early month)
       },
       {
         id: 2,
@@ -73,7 +77,9 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
         type: 'Amex',
         limit: 10000,
         balance: 850,
-        color: 'from-yellow-500 to-orange-600'
+        color: 'from-yellow-500 to-orange-600',
+        billingDay: 28,
+        dueDay: 15
       },
       {
         id: 3,
@@ -82,7 +88,9 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
         type: 'Mastercard',
         limit: 3000,
         balance: 0,
-        color: 'from-gray-600 to-gray-800'
+        color: 'from-gray-600 to-gray-800',
+        billingDay: 1,
+        dueDay: 20
       }
     ];
   });

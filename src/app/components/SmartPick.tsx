@@ -11,16 +11,64 @@ interface Card {
   color: string;
 }
 
-interface SmartPickProps {
-  cards?: Card[];
+import { useState, useEffect } from 'react';
+
+export interface Transaction {
+  date: string;
+  merchant: string;
+  amount: number;
+  category: string;
+  category_label: string;
+  card: string;
 }
 
-export function SmartPick({ cards = [] }: SmartPickProps) {
+interface AnalysisResult {
+  top_spending_categories: { category: string; amount: number; percentage: number }[];
+  spending_insights: string[];
+  smart_card_usage_advice: string;
+  reward_optimization_tips: string[];
+}
+
+interface SmartPickProps {
+  cards?: Card[];
+  transactions?: Transaction[];
+}
+
+export function SmartPick({ cards = [], transactions = [] }: SmartPickProps) {
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (transactions.length > 0) {
+      setLoading(true);
+      setError(''); // Clear previous errors
+      fetch('http://localhost:3000/api/smart-pick/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactions: transactions.slice(0, 50),
+          cards: cards
+        }),
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Analysis failed');
+          return res.json();
+        })
+        .then(data => setAnalysis(data))
+        .catch(err => {
+          console.error(err);
+          setError('Failed to load AI insights');
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [transactions, cards]);
+
   // Calculate totals from user's cards
-  const totalCreditLimit = cards.length > 0 
+  const totalCreditLimit = cards.length > 0
     ? cards.reduce((sum, card) => sum + card.limit, 0)
     : 5000;
-  
+
   const totalAvailableBalance = cards.length > 0
     ? cards.reduce((sum, card) => sum + (card.limit - card.balance), 0)
     : 3800;
@@ -137,17 +185,84 @@ export function SmartPick({ cards = [] }: SmartPickProps) {
           <p className="text-sm text-gray-200">
             <strong className={utilizationPercentage < 30 ? 'text-green-300' : 'text-pink-300'}>
               {utilizationPercentage < 30 ? 'Great job!' : 'Heads up!'}
-            </strong> Your utilization is {utilizationPercentage < 30 ? 'below 30%' : 'above 30%'}, 
-            which {utilizationPercentage < 30 ? 'positively impacts' : 'negatively impacts'} your credit score. Based on your spending patterns, 
+            </strong> Your utilization is {utilizationPercentage < 30 ? 'below 30%' : 'above 30%'},
+            which {utilizationPercentage < 30 ? 'positively impacts' : 'negatively impacts'} your credit score. Based on your spending patterns,
             we've identified cards that will maximize your rewards.
           </p>
         </div>
       </div>
 
+
+
+      {/* AI Analysis Section */}
+      <div className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 backdrop-blur-sm rounded-2xl p-6 border border-indigo-500/30">
+        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-indigo-400" />
+          AI Financial Insights
+        </h2>
+
+        {transactions.length === 0 ? (
+          <div className="text-center py-6 text-gray-400">
+            <p>No recent transactions found to analyze.</p>
+            <p className="text-sm mt-2">Connect your cards to get personalized AI insights.</p>
+          </div>
+        ) : loading ? (
+          <div className="text-center py-8 text-gray-400 animate-pulse">Analyzing your transactions...</div>
+        ) : error ? (
+          <div className="text-red-400 text-sm mt-2 bg-red-500/10 p-4 rounded-xl border border-red-500/20">{error}</div>
+        ) : analysis ? (
+          <div className="space-y-6">
+            {/* Insights & Advice */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-black/20 rounded-xl p-4">
+                <h3 className="text-lg font-medium text-purple-300 mb-2">Spending Insights</h3>
+                <ul className="space-y-2">
+                  {analysis.spending_insights.map((insight, i) => (
+                    <li key={i} className="text-gray-300 text-sm flex gap-2">
+                      <span className="text-purple-500">•</span> {insight}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-black/20 rounded-xl p-4">
+                <h3 className="text-lg font-medium text-pink-300 mb-2">Optimization Tips</h3>
+                <ul className="space-y-2">
+                  {analysis.reward_optimization_tips.map((tip, i) => (
+                    <li key={i} className="text-gray-300 text-sm flex gap-2">
+                      <span className="text-pink-500">•</span> {tip}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Card Usage Advice */}
+            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
+              <h3 className="text-lg font-medium text-indigo-300 mb-1">Smart Usage Advice</h3>
+              <p className="text-gray-200">{analysis.smart_card_usage_advice}</p>
+            </div>
+
+            {/* Top Categories */}
+            <div>
+              <h3 className="text-sm uppercase tracking-wider text-gray-400 mb-3">Top Spending Categories</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {analysis.top_spending_categories.map((cat, i) => (
+                  <div key={i} className="bg-white/5 rounded-lg p-3 text-center">
+                    <div className="text-indigo-400 font-bold text-lg">{cat.percentage}%</div>
+                    <div className="text-gray-300 text-sm truncate">{cat.category}</div>
+                    <div className="text-gray-500 text-xs">₹{cat.amount.toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {/* Recommendations */}
       <div className="space-y-6">
         <h2 className="text-2xl font-semibold text-white">Recommended Cards</h2>
-        
+
         {recommendations.map((card, index) => (
           <div
             key={index}
@@ -231,11 +346,11 @@ export function SmartPick({ cards = [] }: SmartPickProps) {
       {/* Disclaimer */}
       <div className="bg-purple-900/30 border border-purple-500/30 rounded-xl p-4">
         <p className="text-xs text-gray-300">
-          <strong>Disclaimer:</strong> These recommendations are based on your current profile and spending patterns. 
-          Card approval depends on various factors including credit score, income, and issuer criteria. 
+          <strong>Disclaimer:</strong> These recommendations are based on your current profile and spending patterns.
+          Card approval depends on various factors including credit score, income, and issuer criteria.
           Always read terms and conditions before applying. CredZen does not guarantee approval.
         </p>
       </div>
-    </div>
+    </div >
   );
 }

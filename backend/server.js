@@ -6,7 +6,8 @@ const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+const { analyzeTransactions } = require('./llm_service');
 
 const PLAID_SECRET = process.env.PLAID_SECRET || process.env.PLAID_SANDBOX_SECRET;
 
@@ -158,6 +159,23 @@ app.get('/transactions', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+app.post('/api/smart-pick/analyze', async (req, res) => {
+  try {
+    const { transactions } = req.body;
+    if (!transactions || !Array.isArray(transactions)) {
+      return res.status(400).json({ error: 'Invalid transactions data' });
+    }
+
+    // In a real app, we might want to validate or limit the transactions sent to the LLM
+    const { cards } = req.body;
+    const analysis = await analyzeTransactions(transactions, cards);
+    res.json(analysis);
+  } catch (err) {
+    console.error('LLM Analysis Error:', err);
+    res.status(500).json({ error: 'Failed to analyze transactions' });
   }
 });
 

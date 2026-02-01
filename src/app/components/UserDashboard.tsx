@@ -253,7 +253,7 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
           }} onLessonComplete={(message: string) => {
             addActivity(message);
           }} />}
-          {activePage === 'smartpick' && <SmartPick cards={cards} />}
+          {activePage === 'smartpick' && <SmartPick cards={cards} transactions={transactions} />}
           {activePage === 'wallet' && <Wallet cards={cards} onCardsChange={(updatedCards: Card[]) => {
             setCards(updatedCards);
           }} onCardAdded={(message: string) => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, Circle, Star, Trophy } from 'lucide-react';
+import { CheckCircle2, Circle, Star, Trophy, Sparkles } from 'lucide-react';
 import { Progress } from '@/app/components/ui/progress';
 import { SimpleLessonViewer } from './SimpleLessonViewer';
 import { lessonsData, LessonContent } from './lessonData';
@@ -8,9 +8,10 @@ interface LearnProps {
   completedLessons?: Set<number>;
   onLessonsChange?: (lessons: Set<number>) => void;
   onLessonComplete?: (lessonTitle: string) => void;
+  overallUtilization?: number;
 }
 
-export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onLessonComplete }: LearnProps) {
+export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onLessonComplete, overallUtilization = 0 }: LearnProps) {
   const [selectedLesson, setSelectedLesson] = useState<LessonContent | null>(null);
   const [localCompletedLessons, setLocalCompletedLessons] = useState<Set<number>>(completedLessons);
 
@@ -29,7 +30,7 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
     const updated = new Set([...localCompletedLessons, lesson.id]);
     setLocalCompletedLessons(updated);
     onLessonsChange?.(updated);
-    
+
     // Notify parent when lesson is newly completed
     if (isNewCompletion) {
       onLessonComplete?.(`Completed: ${lesson.title}`);
@@ -81,6 +82,49 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
         </div>
       </div>
 
+      {/* Recommended Section - Tailored for User */}
+      <div className="bg-gradient-to-r from-indigo-900/40 to-blue-900/40 backdrop-blur-sm rounded-2xl p-8 border border-indigo-500/30">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-indigo-500/20 rounded-lg">
+            <Sparkles className="w-6 h-6 text-indigo-400" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold text-white">Recommended for You</h2>
+            <p className="text-indigo-200/80 text-sm">
+              {overallUtilization > 30
+                ? "We noticed high utilization. These lessons can help you manage debt."
+                : overallUtilization < 10
+                  ? "Great utilization! Learn how to maximize your benefits."
+                  : "You're doing well. Take your credit game to the next level."}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {lessonsData
+            .filter(l => {
+              if (overallUtilization > 30) return [4, 5, 8].includes(l.id); // Debt & Credit Score focus
+              if (overallUtilization < 10) return [3, 6, 7].includes(l.id); // Rewards & Advanced focus
+              return [2, 5, 9].includes(l.id); // General growth
+            })
+            .map((lesson) => (
+              <div
+                key={`rec-${lesson.id}`}
+                onClick={() => handleLessonClick(lesson)}
+                className="flex items-center gap-4 p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 cursor-pointer transition-all"
+              >
+                <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                  <Star className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">{lesson.title}</h3>
+                  <p className="text-xs text-gray-400 line-clamp-1">{lesson.description}</p>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
       {/* Level 1 - Beginner */}
       <div className="bg-purple-900/40 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/30">
         <div className="flex items-center gap-3 mb-6">
@@ -98,18 +142,16 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
               <div
                 key={lesson.id}
                 onClick={() => handleLessonClick(lesson)}
-                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                  localCompletedLessons.has(lesson.id)
-                    ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
-                    : 'bg-blue-500/20 border-blue-400 hover:shadow-lg hover:shadow-blue-500/50'
-                }`}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${localCompletedLessons.has(lesson.id)
+                  ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
+                  : 'bg-blue-500/20 border-blue-400 hover:shadow-lg hover:shadow-blue-500/50'
+                  }`}
               >
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    localCompletedLessons.has(lesson.id)
-                      ? 'bg-gradient-to-br from-green-500 to-green-600'
-                      : 'bg-gradient-to-br from-blue-500 to-blue-600'
-                  }`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${localCompletedLessons.has(lesson.id)
+                    ? 'bg-gradient-to-br from-green-500 to-green-600'
+                    : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                    }`}
                 >
                   {localCompletedLessons.has(lesson.id) ? (
                     <CheckCircle2 className="w-6 h-6 text-white" />
@@ -149,18 +191,16 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
               <div
                 key={lesson.id}
                 onClick={() => handleLessonClick(lesson)}
-                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                  localCompletedLessons.has(lesson.id)
-                    ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
-                    : 'bg-purple-500/20 border-purple-400 hover:shadow-lg hover:shadow-purple-500/50'
-                }`}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${localCompletedLessons.has(lesson.id)
+                  ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
+                  : 'bg-purple-500/20 border-purple-400 hover:shadow-lg hover:shadow-purple-500/50'
+                  }`}
               >
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    localCompletedLessons.has(lesson.id)
-                      ? 'bg-gradient-to-br from-green-500 to-green-600'
-                      : 'bg-gradient-to-br from-purple-500 to-purple-600'
-                  }`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${localCompletedLessons.has(lesson.id)
+                    ? 'bg-gradient-to-br from-green-500 to-green-600'
+                    : 'bg-gradient-to-br from-purple-500 to-purple-600'
+                    }`}
                 >
                   {localCompletedLessons.has(lesson.id) ? (
                     <CheckCircle2 className="w-6 h-6 text-white" />
@@ -200,18 +240,16 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
               <div
                 key={lesson.id}
                 onClick={() => handleLessonClick(lesson)}
-                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                  localCompletedLessons.has(lesson.id)
-                    ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
-                    : 'bg-pink-500/20 border-pink-400 hover:shadow-lg hover:shadow-pink-500/50'
-                }`}
+                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${localCompletedLessons.has(lesson.id)
+                  ? 'bg-green-500/20 border-green-400 hover:shadow-lg hover:shadow-green-500/50'
+                  : 'bg-pink-500/20 border-pink-400 hover:shadow-lg hover:shadow-pink-500/50'
+                  }`}
               >
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    localCompletedLessons.has(lesson.id)
-                      ? 'bg-gradient-to-br from-green-500 to-green-600'
-                      : 'bg-gradient-to-br from-pink-500 to-pink-600'
-                  }`}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${localCompletedLessons.has(lesson.id)
+                    ? 'bg-gradient-to-br from-green-500 to-green-600'
+                    : 'bg-gradient-to-br from-pink-500 to-pink-600'
+                    }`}
                 >
                   {localCompletedLessons.has(lesson.id) ? (
                     <CheckCircle2 className="w-6 h-6 text-white" />

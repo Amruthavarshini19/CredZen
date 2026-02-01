@@ -1,4 +1,4 @@
-import { CreditCard, Brain, TrendingUp, Award, CheckCircle2 } from 'lucide-react';
+import { CreditCard, Brain, CheckCircle2 } from 'lucide-react';
 import { PlaidConnect } from './PlaidConnect';
 import { lessonsData } from './lessonData';
 
@@ -38,9 +38,7 @@ export function Home({ onNavigate, completedLessons = new Set(), cards = [], act
 
   const stats = [
     { label: 'Learning Progress', value: `${Math.round(learningProgressPercent)}%`, icon: <Brain className="w-5 h-5" /> },
-    { label: 'Cards Managed', value: cards.length.toString(), icon: <CreditCard className="w-5 h-5" /> },
-    { label: 'Rewards Earned', value: '₹248', icon: <Award className="w-5 h-5" /> },
-    { label: 'Credit Score', value: '742', icon: <TrendingUp className="w-5 h-5" /> }
+    { label: 'Cards Managed', value: cards.length.toString(), icon: <CreditCard className="w-5 h-5" /> }
   ];
 
   // Format time difference

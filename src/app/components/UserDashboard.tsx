@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Wallet as WalletIcon, Settings, LogOut, ChevronDown, Home as HomeIcon, GraduationCap, Sparkles, CreditCard } from 'lucide-react';
+import { User, Wallet as WalletIcon, Settings, LogOut, ChevronDown, Home as HomeIcon, GraduationCap, Sparkles, CreditCard, Calculator } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/app/components/ui/dropdown-menu';
 import { Home } from '@/app/components/Home';
@@ -8,6 +8,7 @@ import { SmartPick } from '@/app/components/SmartPick';
 import { Wallet } from '@/app/components/Wallet';
 import { Tracker } from '@/app/components/Tracker';
 import { SettingsPage } from '@/app/components/SettingsPage';
+import { DebtSimulator } from '@/app/components/DebtSimulator';
 
 interface UserDashboardProps {
   onLogout: () => void;
@@ -40,13 +41,18 @@ export interface Transaction {
 }
 
 export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps) {
-  const [activePage, setActivePage] = useState<'home' | 'learn' | 'smartpick' | 'wallet' | 'tracker' | 'settings'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'learn' | 'smartpick' | 'wallet' | 'tracker' | 'settings' | 'simulator'>('home');
 
   // Initialize state with localStorage data
   const [completedLessons, setCompletedLessons] = useState<Set<number>>(() => {
     const saved = localStorage.getItem(`credzen_lessons_${userMobileNumber}`);
     return saved ? new Set(JSON.parse(saved)) : new Set([1, 2]);
   });
+
+  // Save activities to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`credzen_lessons_${userMobileNumber}`, JSON.stringify(Array.from(completedLessons)));
+  }, [completedLessons, userMobileNumber]);
 
   const [cards, setCards] = useState<Card[]>(() => {
     const saved = localStorage.getItem(`credzen_cards_${userMobileNumber}`);
@@ -81,6 +87,11 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
     ];
   });
 
+  // Save cards to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(`credzen_cards_${userMobileNumber}`, JSON.stringify(cards));
+  }, [cards, userMobileNumber]);
+
   const [activities, setActivities] = useState<Activity[]>(() => {
     const saved = localStorage.getItem(`credzen_activities_${userMobileNumber}`);
     return saved ? JSON.parse(saved) : [];
@@ -110,16 +121,6 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
     // Try fetching on mount in case already connected
     fetchTransactions();
   }, []);
-
-  // Save completed lessons to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem(`credzen_lessons_${userMobileNumber}`, JSON.stringify(Array.from(completedLessons)));
-  }, [completedLessons, userMobileNumber]);
-
-  // Save cards to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem(`credzen_cards_${userMobileNumber}`, JSON.stringify(cards));
-  }, [cards, userMobileNumber]);
 
   const handleLogoutClick = () => {
     // Clear any temporary data if needed
@@ -227,6 +228,21 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
                 <span className="font-semibold">Smart Pick</span>
               </button>
               <button
+                onClick={() => setActivePage('simulator')}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${activePage === 'simulator'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                  : 'text-gray-300 hover:bg-purple-500/20 hover:text-white'
+                  }`}
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${activePage === 'simulator'
+                  ? 'bg-white/20'
+                  : 'bg-purple-500/20'
+                  }`}>
+                  <Calculator className="w-5 h-5" />
+                </div>
+                <span className="font-semibold">Simulator</span>
+              </button>
+              <button
                 onClick={() => setActivePage('tracker')}
                 className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${activePage === 'tracker'
                   ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
@@ -248,12 +264,26 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
         {/* Main Content Area */}
         <main className="flex-1 p-8">
           {activePage === 'home' && <Home onNavigate={(page: 'learn' | 'smartpick' | 'wallet') => setActivePage(page)} completedLessons={completedLessons} cards={cards} activities={activities} onPlaidConnected={fetchTransactions} />}
-          {activePage === 'learn' && <Learn completedLessons={completedLessons} onLessonsChange={(lessons: Set<number>) => {
-            setCompletedLessons(lessons);
-          }} onLessonComplete={(message: string) => {
-            addActivity(message);
-          }} />}
+          {activePage === 'learn' && (() => {
+            const totalLimit = cards.reduce((sum, card) => sum + card.limit, 0);
+            const totalBalance = cards.reduce((sum, card) => sum + card.balance, 0);
+            const overallUtilization = totalLimit > 0 ? (totalBalance / totalLimit) * 100 : 0;
+
+            return (
+              <Learn
+                completedLessons={completedLessons}
+                overallUtilization={overallUtilization}
+                onLessonsChange={(lessons: Set<number>) => {
+                  setCompletedLessons(lessons);
+                }}
+                onLessonComplete={(message: string) => {
+                  addActivity(message);
+                }}
+              />
+            );
+          })()}
           {activePage === 'smartpick' && <SmartPick cards={cards} transactions={transactions} />}
+          {activePage === 'simulator' && <DebtSimulator />}
           {activePage === 'wallet' && <Wallet cards={cards} onCardsChange={(updatedCards: Card[]) => {
             setCards(updatedCards);
           }} onCardAdded={(message: string) => {

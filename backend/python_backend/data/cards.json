@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Chase",
+    "lastFour": "9012",
+    "type": "Visa",
+    "limit": 100000.0,
+    "balance": 50000.0,
+    "billingDay": 15,
+    "dueDay": 5,
+    "color": "from-purple-500 to-purple-700",
+    "id": 1770790116452
+  }
+]

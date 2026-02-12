@@ -25,7 +25,7 @@ interface HomeProps {
   completedLessons?: Set<number>;
   cards?: Card[];
   activities?: Activity[];
-  onPlaidConnected?: () => void;
+  onPlaidConnected?: (token: string) => void;
 }
 
 export function Home({ onNavigate, completedLessons = new Set(), cards = [], activities = [], onPlaidConnected }: HomeProps) {

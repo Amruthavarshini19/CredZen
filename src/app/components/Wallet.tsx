@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Plus, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { CreditCard, Plus, Eye, EyeOff, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Input } from '@/app/components/ui/input';
@@ -20,11 +20,12 @@ interface Card {
 interface WalletProps {
   cards?: Card[];
   onCardsChange?: (cards: Card[]) => void;
-  onCardAdded?: (cardName: string) => void;
-  onCardDeleted?: (cardName: string) => void;
+  onCardAdded?: (card: any) => void;
+  onCardUpdated?: (card: any) => void;
+  onCardDeleted?: (cardId: number) => void;
 }
 
-export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, onCardDeleted }: WalletProps) {
+export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, onCardUpdated, onCardDeleted }: WalletProps) {
   const [cards, setCards] = useState<Card[]>(initialCards);
   const [showAddCard, setShowAddCard] = useState(false);
   const [showCardNumbers, setShowCardNumbers] = useState<{ [key: number]: boolean }>({});
@@ -40,8 +41,12 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
     type: '',
     limit: '',
     billingDay: '15',
-    dueDay: '5'
+    dueDay: '5',
+    balance: '0'
   });
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingCardId, setEditingCardId] = useState<number | null>(null);
 
   const toggleCardNumber = (cardId: number) => {
     setShowCardNumbers(prev => ({
@@ -50,46 +55,84 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
     }));
   };
 
-  const handleAddCard = async () => {
+  const handleSaveCard = async () => {
     if (newCard.name && newCard.number && newCard.limit) {
       const lastFour = newCard.number.slice(-4);
-      const newCardData: Card = {
-        id: Date.now(),
-        name: newCard.name,
-        lastFour: lastFour,
-        type: newCard.type || 'Visa',
-        limit: parseInt(newCard.limit),
-        balance: 0,
-        color: 'from-purple-500 to-purple-700',
-        billingDay: parseInt(newCard.billingDay),
-        dueDay: parseInt(newCard.dueDay)
-      };
 
-      const updatedCards = [...cards, newCardData];
-      setCards(updatedCards);
-      onCardsChange?.(updatedCards);
-      onCardAdded?.(`Added new card: ${newCard.name}`);
+      if (isEditing && editingCardId !== null) {
+        // Prepare updated card object logic
+        const updatedCardData = {
+          id: editingCardId,
+          name: newCard.name,
+          lastFour: lastFour,
+          type: newCard.type,
+          limit: parseInt(newCard.limit),
+          balance: parseFloat(newCard.balance) || 0,
+          billingDay: parseInt(newCard.billingDay),
+          dueDay: parseInt(newCard.dueDay),
+          color: cards.find(c => c.id === editingCardId)?.color || 'from-purple-500 to-purple-700'
+        };
+        // Call parent handler
+        onCardUpdated?.(updatedCardData);
+      } else {
+        const newCardData = {
+          name: newCard.name,
+          lastFour: lastFour,
+          type: newCard.type || 'Visa',
+          limit: parseInt(newCard.limit),
+          balance: parseFloat(newCard.balance) || 0,
+          color: 'from-purple-500 to-purple-700',
+          billingDay: parseInt(newCard.billingDay),
+          dueDay: parseInt(newCard.dueDay)
+        };
+        // Call parent handler
+        onCardAdded?.(newCardData);
+      }
 
-      setNewCard({ name: '', number: '', type: '', limit: '', billingDay: '15', dueDay: '5' });
+      setNewCard({ name: '', number: '', type: '', limit: '', billingDay: '15', dueDay: '5', balance: '0' });
       setShowAddCard(false);
+      setIsEditing(false);
+      setEditingCardId(null);
     }
   };
 
-  const handleDeleteCard = async (cardId: number) => {
-    if (!confirm('Are you sure you want to delete this card?')) return;
+  const handleEditCard = (card: Card) => {
+    setNewCard({
+      name: card.name,
+      number: `**** **** **** ${card.lastFour}`,
+      type: card.type,
+      limit: card.limit.toString(),
+      billingDay: card.billingDay.toString(),
+      dueDay: card.dueDay.toString(),
+      balance: card.balance.toString()
+    });
+    setIsEditing(true);
+    setEditingCardId(card.id);
+    setShowAddCard(true);
+  };
 
-    const cardToDelete = cards.find(c => c.id === cardId);
-    const updatedCards = cards.filter(c => c.id !== cardId);
-    setCards(updatedCards);
-    onCardsChange?.(updatedCards);
-    if (cardToDelete) {
-      onCardDeleted?.(`Deleted card: ${cardToDelete.name}`);
-    }
+  const [cardToDelete, setCardToDelete] = useState<Card | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const confirmDelete = (card: Card) => {
+    setCardToDelete(card);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteCard = async () => {
+    if (!cardToDelete) return;
+
+    // Call parent handler
+    onCardDeleted?.(cardToDelete.id);
+
+    setShowDeleteConfirm(false);
+    setCardToDelete(null);
   };
 
   const totalLimit = cards.reduce((sum, card) => sum + card.limit, 0);
-  const totalAvailableBalance = cards.reduce((sum, card) => sum + (card.limit - card.balance), 0);
-  const overallUtilization = totalLimit > 0 ? Math.round(((totalLimit - totalAvailableBalance) / totalLimit) * 100) : 0;
+  const totalBalance = cards.reduce((sum, card) => sum + card.balance, 0);
+  const totalAvailableBalance = totalLimit - totalBalance;
+  const overallUtilization = totalLimit > 0 ? Math.round((totalBalance / totalLimit) * 100) : 0;
 
 
   return (
@@ -106,7 +149,11 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
             </h1>
           </div>
           <Button
-            onClick={() => setShowAddCard(true)}
+            onClick={() => {
+              setIsEditing(false);
+              setNewCard({ name: '', number: '', type: '', limit: '', billingDay: '15', dueDay: '5', balance: '0' });
+              setShowAddCard(true);
+            }}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -144,7 +191,7 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
         <div className="grid md:grid-cols-2 gap-6">
           {cards.map((card) => {
             const availableBalance = card.limit - card.balance;
-            const utilization = Math.round((availableBalance / card.limit) * 100);
+            const utilization = card.limit > 0 ? Math.round((card.balance / card.limit) * 100) : 0;
 
             return (
               <div key={card.id} className="group relative">
@@ -156,13 +203,22 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full translate-y-16 -translate-x-16" />
                   </div>
 
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => handleDeleteCard(card.id)}
-                    className="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <button
+                      onClick={() => handleEditCard(card)}
+                      className="w-10 h-10 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center transition-all shadow-lg border border-white/10"
+                      title="Edit Card"
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => confirmDelete(card)}
+                      className="w-10 h-10 bg-black/40 hover:bg-red-500/80 text-white/70 hover:text-white rounded-full flex items-center justify-center transition-all shadow-lg border border-white/10"
+                      title="Delete Card"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
 
                   {/* Card Header */}
                   <div className="relative z-10">
@@ -231,9 +287,11 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
       < Dialog open={showAddCard} onOpenChange={setShowAddCard} >
         <DialogContent className="bg-gradient-to-br from-gray-900 to-purple-900 border-purple-500/50">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-white">Add New Card</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-white">
+              {isEditing ? 'Edit Card Details' : 'Add New Card'}
+            </DialogTitle>
             <DialogDescription className="text-gray-300">
-              Enter your credit card details to add it to your wallet
+              {isEditing ? 'Update your credit card details below' : 'Enter your credit card details to add it to your wallet'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
@@ -247,25 +305,40 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
                 className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
               />
             </div>
-            <div>
-              <Label htmlFor="cardNumber" className="text-gray-200">Card Number</Label>
-              <Input
-                id="cardNumber"
-                placeholder="1234 5678 9012 3456"
-                value={newCard.number}
-                onChange={(e) => setNewCard({ ...newCard, number: e.target.value.replace(/\s/g, '') })}
-                className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
-              />
-            </div>
-            <div>
-              <Label htmlFor="cardType" className="text-gray-200">Card Type</Label>
-              <Input
-                id="cardType"
-                placeholder="Visa, Mastercard, Amex, etc."
-                value={newCard.type}
-                onChange={(e) => setNewCard({ ...newCard, type: e.target.value })}
-                className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
-              />
+            {!isEditing && (
+              <div>
+                <Label htmlFor="cardNumber" className="text-gray-200">Card Number</Label>
+                <Input
+                  id="cardNumber"
+                  placeholder="1234 5678 9012 3456"
+                  value={newCard.number}
+                  onChange={(e) => setNewCard({ ...newCard, number: e.target.value.replace(/\s/g, '') })}
+                  className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
+                />
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="cardType" className="text-gray-200">Card Type</Label>
+                <Input
+                  id="cardType"
+                  placeholder="Visa, Mastercard, etc."
+                  value={newCard.type}
+                  onChange={(e) => setNewCard({ ...newCard, type: e.target.value })}
+                  className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="currentBalance" className="text-gray-200">Current Balance</Label>
+                <Input
+                  id="currentBalance"
+                  type="number"
+                  placeholder="₹0"
+                  value={newCard.balance}
+                  onChange={(e) => setNewCard({ ...newCard, balance: e.target.value })}
+                  className="bg-black/30 border-purple-500/50 text-white placeholder:text-gray-400"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="creditLimit" className="text-gray-200">Credit Limit</Label>
@@ -303,15 +376,45 @@ export function Wallet({ cards: initialCards = [], onCardsChange, onCardAdded, o
               </div>
             </div>
             <Button
-              onClick={handleAddCard}
+              onClick={handleSaveCard}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Card
+              {isEditing ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+              {isEditing ? 'Update Card' : 'Add Card'}
             </Button>
           </div>
         </DialogContent>
       </Dialog >
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="bg-gray-900 border-red-500/50 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
+              <Trash2 className="w-6 h-6 text-red-500" />
+              Delete Card
+            </DialogTitle>
+            <DialogDescription className="text-gray-300 pt-2">
+              Are you sure you want to remove <span className="font-bold text-white">{cardToDelete?.name}</span>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-4 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="flex-1 bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteCard}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }

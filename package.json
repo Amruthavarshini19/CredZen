@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "client": "vite",
-    "server": "node backend/server.js",
+    "server": "cd backend/python_backend && python -m uvicorn main:app --reload --port 8000",
     "dev": "concurrently \"npm:server\" \"npm:client\""
   },
   "dependencies": {

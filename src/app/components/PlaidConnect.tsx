@@ -5,7 +5,7 @@ import { Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PlaidConnectProps {
-  onConnected?: () => void;
+  onConnected?: (info?: any) => void;
   className?: string;
   children?: React.ReactNode;
 }
@@ -17,8 +17,12 @@ export function PlaidConnect({ onConnected, className, children }: PlaidConnectP
   useEffect(() => {
     async function createLinkToken() {
       try {
-        const response = await fetch('http://localhost:3000/create_link_token', {
+        const response = await fetch('http://localhost:8000/create_link_token', {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ user_id: 'user-123' }), // Simplified user ID for now
         });
         const data = await response.json();
         setToken(data.link_token);
@@ -33,15 +37,16 @@ export function PlaidConnect({ onConnected, className, children }: PlaidConnectP
   // 2. Handle Success (Exchange public token)
   const onSuccess = useCallback(async (public_token: string) => {
     try {
-      await fetch('http://localhost:3000/exchange_public_token', {
+      const response = await fetch('http://localhost:8000/exchange_public_token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ public_token }),
       });
+      const data = await response.json();
       toast.success('Bank connected successfully!');
-      onConnected?.();
+      onConnected?.(data.access_token);
     } catch (err) {
       console.error('Error exchanging public token', err);
       toast.error('Failed to connect bank account');

@@ -1,17 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, Star, Trophy, Sparkles } from 'lucide-react';
 import { Progress } from '@/app/components/ui/progress';
 import { SimpleLessonViewer } from './SimpleLessonViewer';
 import { lessonsData, LessonContent } from './lessonData';
+
+interface Card {
+  id: number;
+  name: string;
+  lastFour: string;
+  type: string;
+  limit: number;
+  balance: number;
+  color: string;
+  billingDay: number;
+  dueDay: number;
+}
 
 interface LearnProps {
   completedLessons?: Set<number>;
   onLessonsChange?: (lessons: Set<number>) => void;
   onLessonComplete?: (lessonTitle: string) => void;
   overallUtilization?: number;
+  cards?: Card[];
 }
 
-export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onLessonComplete, overallUtilization = 0 }: LearnProps) {
+export function Learn({
+  completedLessons = new Set([1, 2]),
+  onLessonsChange,
+  onLessonComplete,
+  overallUtilization = 0,
+  cards = []
+}: LearnProps) {
   const [selectedLesson, setSelectedLesson] = useState<LessonContent | null>(null);
   const [localCompletedLessons, setLocalCompletedLessons] = useState<Set<number>>(completedLessons);
 
@@ -41,6 +60,37 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
     setSelectedLesson(null);
   };
 
+  const [recommendedIds, setRecommendedIds] = useState<number[]>([]);
+
+  // Identify specific card-level mistakes (Keep for UI display)
+  const cardMistakes = cards
+    .filter(card => (card.balance / card.limit) > 0.3)
+    .map(card => ({
+      type: 'high_utilization',
+      message: `"${card.name}" is ${Math.round((card.balance / card.limit) * 100)}% utilized`,
+      suggestion: "Keep below 30% for better credit health.",
+      lessonIds: [6, 4]
+    }));
+
+  useEffect(() => {
+    async function fetchRecommendations() {
+      try {
+        const riskLevel = overallUtilization > 30 ? "High" : "Low";
+        const res = await fetch(`http://localhost:8000/api/learning/recommendations?utilization=${overallUtilization}&risk_level=${riskLevel}`);
+        if (res.ok) {
+          const data = await res.json();
+          const ids = data.modules.map((m: any) => m.id);
+          // Combine backend recommendations with local mistake-based ones if needed, or just use backend
+          setRecommendedIds(ids);
+        }
+      } catch (error) {
+        console.error("Failed to fetch recommendations", error);
+        setRecommendedIds(overallUtilization > 10 ? [2, 5, 9] : [1, 3, 6]);
+      }
+    }
+    fetchRecommendations();
+  }, [overallUtilization]);
+
   // Render SimpleLessonViewer if a lesson is selected
   if (selectedLesson) {
     return (
@@ -61,7 +111,7 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
               Learn
             </h1>
             <p className="text-lg text-gray-300">
-              Master credit cards through comprehensive lessons
+              Master credit cards through interactive lessons
             </p>
           </div>
           <div className="text-right">
@@ -83,45 +133,64 @@ export function Learn({ completedLessons = new Set([1, 2]), onLessonsChange, onL
       </div>
 
       {/* Recommended Section - Tailored for User */}
-      <div className="bg-gradient-to-r from-indigo-900/40 to-blue-900/40 backdrop-blur-sm rounded-2xl p-8 border border-indigo-500/30">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-indigo-500/20 rounded-lg">
-            <Sparkles className="w-6 h-6 text-indigo-400" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-semibold text-white">Recommended for You</h2>
-            <p className="text-indigo-200/80 text-sm">
-              {overallUtilization > 30
-                ? "We noticed high utilization. These lessons can help you manage debt."
-                : overallUtilization < 10
-                  ? "Great utilization! Learn how to maximize your benefits."
-                  : "You're doing well. Take your credit game to the next level."}
-            </p>
-          </div>
-        </div>
+      <div className="bg-gradient-to-br from-indigo-900/60 to-purple-900/60 backdrop-blur-md rounded-2xl p-8 border border-indigo-500/30 shadow-2xl relative overflow-hidden">
+        {/* Abstract Background Element */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
-        <div className="grid md:grid-cols-2 gap-4">
-          {lessonsData
-            .filter(l => {
-              if (overallUtilization > 30) return [4, 5, 8].includes(l.id); // Debt & Credit Score focus
-              if (overallUtilization < 10) return [3, 6, 7].includes(l.id); // Rewards & Advanced focus
-              return [2, 5, 9].includes(l.id); // General growth
-            })
-            .map((lesson) => (
-              <div
-                key={`rec-${lesson.id}`}
-                onClick={() => handleLessonClick(lesson)}
-                className="flex items-center gap-4 p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 cursor-pointer transition-all"
-              >
-                <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
-                  <Star className="w-5 h-5 text-indigo-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">{lesson.title}</h3>
-                  <p className="text-xs text-gray-400 line-clamp-1">{lesson.description}</p>
-                </div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-indigo-500/20 rounded-xl border border-indigo-400/30">
+              <Sparkles className="w-6 h-6 text-indigo-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">Recommended for You</h2>
+              <p className="text-indigo-200/70 text-sm">Based on your individual card usage and mistakes</p>
+            </div>
+          </div>
+
+          {/* Pinpointed Mistakes Section */}
+          {cardMistakes.length > 0 && (
+            <div className="mb-8 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-pink-400 mb-2">Mistakes Identified</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {cardMistakes.map((mistake, idx) => (
+                  <div key={idx} className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 animate-pulse">
+                      <Circle className="w-4 h-4 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">{mistake.message}</p>
+                      <p className="text-gray-400 text-xs mt-1">{mistake.suggestion}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {lessonsData
+              .filter(l => recommendedIds.includes(l.id))
+              .map((lesson) => (
+                <div
+                  key={`rec-${lesson.id}`}
+                  onClick={() => handleLessonClick(lesson)}
+                  className="group flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-indigo-400/50 transition-all cursor-pointer shadow-lg"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <Star className="w-6 h-6 text-indigo-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-white group-hover:text-indigo-300 transition-colors">{lesson.title}</h3>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-1">{lesson.description}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] bg-yellow-400/10 text-yellow-400 px-2 py-0.5 rounded-full font-bold">{lesson.xp} XP</span>
+                      <span className="text-[10px] text-gray-500">Level {lesson.level}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
       </div>
 

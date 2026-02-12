@@ -56,94 +56,70 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
     localStorage.setItem(`credzen_lessons_${userMobileNumber}`, JSON.stringify(Array.from(completedLessons)));
   }, [completedLessons, userMobileNumber]);
 
-  const [cards, setCards] = useState<Card[]>(() => {
-    const saved = localStorage.getItem(`credzen_cards_${userMobileNumber}`);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Ensure all cards have billingDay and dueDay (migration logic)
-      return parsed.map((card: any, index: number) => {
-        let b = card.billingDay;
-        let d = card.dueDay;
+  // Fetch cards from backend
+  const [cards, setCards] = useState<Card[]>([]);
 
-        // Force specific dates requested by user if names match
-        if (card.name.toLowerCase().includes('chase')) { b = 15; d = 25; }
-        else if (card.name.toLowerCase().includes('american express')) { b = 23; d = 2; }
-        else if (card.name.toLowerCase().includes('capital one')) { b = 4; d = 16; }
-        else if (card.name.toLowerCase().includes('sbi')) { b = 5; d = 10; }
-
-        // Provide varied default dates based on index if still missing
-        if (b === undefined || d === undefined) {
-          const variations = [
-            { b: 15, d: 25 },
-            { b: 23, d: 2 },
-            { b: 4, d: 16 },
-            { b: 5, d: 10 },
-            { b: 28, d: 23 }
-          ];
-          const v = variations[index % variations.length];
-          b = b ?? v.b;
-          d = d ?? v.d;
-        }
-
-        return {
-          ...card,
-          billingDay: b,
-          dueDay: d
-        };
-      });
-    }
-    return [
-      {
-        id: 1,
-        name: 'Chase Sapphire Preferred',
-        lastFour: '4532',
-        type: 'Visa',
-        limit: 5000,
-        balance: 1200,
-        color: 'from-blue-500 to-blue-700',
-        billingDay: 15,
-        dueDay: 25
-      },
-      {
-        id: 2,
-        name: 'American Express Gold',
-        lastFour: '8765',
-        type: 'Amex',
-        limit: 10000,
-        balance: 850,
-        color: 'from-yellow-500 to-orange-600',
-        billingDay: 23,
-        dueDay: 2
-      },
-      {
-        id: 3,
-        name: 'Capital One Quicksilver',
-        lastFour: '2341',
-        type: 'Mastercard',
-        limit: 3000,
-        balance: 0,
-        color: 'from-gray-600 to-gray-800',
-        billingDay: 4,
-        dueDay: 16
-      },
-      {
-        id: 4,
-        name: 'SBI Card',
-        lastFour: '9012',
-        type: 'Visa',
-        limit: 2000,
-        balance: 450,
-        color: 'from-blue-700 to-blue-900',
-        billingDay: 5,
-        dueDay: 10
+  const fetchCards = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/cards');
+      if (res.ok) {
+        const data = await res.json();
+        setCards(data);
       }
-    ];
-  });
+    } catch (error) {
+      console.error('Failed to fetch cards', error);
+    }
+  };
 
-  // Save cards to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem(`credzen_cards_${userMobileNumber}`, JSON.stringify(cards));
-  }, [cards, userMobileNumber]);
+    fetchCards();
+  }, []);
+
+  const handleCardAdd = async (newCard: any) => {
+    try {
+      const res = await fetch('http://localhost:8000/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCard)
+      });
+      if (res.ok) {
+        await fetchCards();
+        addActivity(`Added new card: ${newCard.name}`);
+      }
+    } catch (error) {
+      console.error('Failed to add card', error);
+    }
+  };
+
+  const handleCardUpdate = async (card: Card) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/cards/${card.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(card)
+      });
+      if (res.ok) {
+        await fetchCards();
+        addActivity(`Updated card: ${card.name}`);
+      }
+    } catch (error) {
+      console.error('Failed to update card', error);
+    }
+  };
+
+  const handleCardDelete = async (cardId: number, cardName: string) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/cards/${cardId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchCards();
+        addActivity(`Deleted card: ${cardName}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete card', error);
+    }
+  };
 
   const [activities, setActivities] = useState<Activity[]>(() => {
     const saved = localStorage.getItem(`credzen_activities_${userMobileNumber}`);
@@ -157,9 +133,14 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const fetchTransactions = async () => {
+  const [plaidAccessToken, setPlaidAccessToken] = useState<string | null>(() => {
+    return localStorage.getItem(`plaid_access_token_${userMobileNumber}`);
+  });
+
+  const fetchTransactions = async (token: string | null = plaidAccessToken) => {
+    if (!token) return;
     try {
-      const res = await fetch('http://localhost:3000/transactions');
+      const res = await fetch(`http://localhost:8000/transactions?access_token=${token}`);
       if (res.ok) {
         const data = await res.json();
         setTransactions(data);
@@ -170,10 +151,20 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
     }
   };
 
+  const handlePlaidConnected = (token: string) => {
+    if (token) {
+      setPlaidAccessToken(token);
+      localStorage.setItem(`plaid_access_token_${userMobileNumber}`, token);
+      fetchTransactions(token);
+    }
+  };
+
   useEffect(() => {
-    // Try fetching on mount in case already connected
-    fetchTransactions();
-  }, []);
+    // Try fetching on mount if token exists
+    if (plaidAccessToken) {
+      fetchTransactions(plaidAccessToken);
+    }
+  }, [plaidAccessToken]);
 
   const handleLogoutClick = () => {
     // Clear any temporary data if needed
@@ -316,7 +307,7 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
 
         {/* Main Content Area */}
         <main className="flex-1 p-8">
-          {activePage === 'home' && <Home onNavigate={(page: 'learn' | 'smartpick' | 'wallet') => setActivePage(page)} completedLessons={completedLessons} cards={cards} activities={activities} onPlaidConnected={fetchTransactions} />}
+          {activePage === 'home' && <Home onNavigate={(page: 'learn' | 'smartpick' | 'wallet') => setActivePage(page)} completedLessons={completedLessons} cards={cards} activities={activities} onPlaidConnected={handlePlaidConnected} />}
           {activePage === 'learn' && (() => {
             const totalLimit = cards.reduce((sum, card) => sum + card.limit, 0);
             const totalBalance = cards.reduce((sum, card) => sum + card.balance, 0);
@@ -326,6 +317,7 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
               <Learn
                 completedLessons={completedLessons}
                 overallUtilization={overallUtilization}
+                cards={cards} // Pass full cards list
                 onLessonsChange={(lessons: Set<number>) => {
                   setCompletedLessons(lessons);
                 }}
@@ -337,13 +329,13 @@ export function UserDashboard({ onLogout, userMobileNumber }: UserDashboardProps
           })()}
           {activePage === 'smartpick' && <SmartPick cards={cards} transactions={transactions} />}
           {activePage === 'simulator' && <DebtSimulator />}
-          {activePage === 'wallet' && <Wallet cards={cards} onCardsChange={(updatedCards: Card[]) => {
-            setCards(updatedCards);
-          }} onCardAdded={(message: string) => {
-            addActivity(message);
-          }} onCardDeleted={(message: string) => {
-            addActivity(message);
-          }} />}
+          {activePage === 'wallet' && <Wallet
+            cards={cards}
+            onCardsChange={() => { }} // Legacy prop, can be removed or kept no-op
+            onCardAdded={(card) => handleCardAdd(card)}
+            onCardUpdated={(card) => handleCardUpdate(card)}
+            onCardDeleted={(cardId) => handleCardDelete(cardId, "Unknown")} // Wallet needs update to pass name or we just use ID
+          />}
           {activePage === 'tracker' && <Tracker cards={cards} transactions={transactions} onCardsChange={(updatedCards: Card[]) => {
             setCards(updatedCards);
           }} onCardAdded={(message: string) => {

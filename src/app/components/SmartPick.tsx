@@ -27,6 +27,7 @@ interface AnalysisResult {
   spending_insights: string[];
   smart_card_usage_advice: string;
   reward_optimization_tips: string[];
+  potential_rewards?: Record<string, number>;
 }
 
 interface SmartPickProps {
@@ -43,7 +44,7 @@ export function SmartPick({ cards = [], transactions = [] }: SmartPickProps) {
     if (transactions.length > 0) {
       setLoading(true);
       setError(''); // Clear previous errors
-      fetch('http://localhost:3000/api/smart-pick/analyze', {
+      fetch('http://localhost:8000/api/smart-pick/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -69,12 +70,12 @@ export function SmartPick({ cards = [], transactions = [] }: SmartPickProps) {
     ? cards.reduce((sum, card) => sum + card.limit, 0)
     : 5000;
 
-  const totalAvailableBalance = cards.length > 0
-    ? cards.reduce((sum, card) => sum + (card.limit - card.balance), 0)
-    : 3800;
+  const totalCreditBalance = cards.length > 0
+    ? cards.reduce((sum, card) => sum + card.balance, 0)
+    : 1200;
 
   const utilizationPercentage = totalCreditLimit > 0
-    ? Math.round((totalAvailableBalance / totalCreditLimit) * 100)
+    ? Math.round((totalCreditBalance / totalCreditLimit) * 100)
     : 24;
 
   const totalMonthlySpend = cards.length > 0
@@ -86,47 +87,47 @@ export function SmartPick({ cards = [], transactions = [] }: SmartPickProps) {
       name: 'Chase Sapphire Preferred',
       issuer: 'Chase',
       score: 95,
-      reason: 'Perfect for your travel spending patterns',
+      reason: 'Excellent for travel and dining with 4x points on both.',
       annualFee: 95,
       signupBonus: '60,000 points',
       apr: '21.49% - 28.49%',
       benefits: [
-        'Earn 5x points on travel through Chase portal',
-        '3x points on dining and streaming',
-        '2x points on all other travel',
+        '4% rewards on Travel and Dining',
+        '2% on Shopping',
+        '1% on all other purchases',
         'No foreign transaction fees'
       ],
       image: 'https://images.unsplash.com/photo-1559526324-593bc073d938?w=400&q=80'
     },
     {
-      name: 'Capital One Quicksilver',
-      issuer: 'Capital One',
-      score: 88,
-      reason: 'Simple cashback with no categories to track',
+      name: 'Regions Premium Cashback',
+      issuer: 'Regions',
+      score: 92,
+      reason: 'Top-tier 5% cashback on dining, shopping, and bills.',
       annualFee: 0,
       signupBonus: '₹200 cashback',
       apr: '19.99% - 29.99%',
       benefits: [
-        '1.5% cashback on all purchases',
+        '5% cashback on Dining, Shopping, and Bills',
+        '2% on Fuel and Travel',
         'No annual fee',
-        'No foreign transaction fees',
-        '0% intro APR for 15 months'
+        'Simple redemption options'
       ],
       image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&q=80'
     },
     {
-      name: 'American Express Gold',
-      issuer: 'American Express',
-      score: 82,
-      reason: 'Maximize your dining and grocery rewards',
-      annualFee: 250,
-      signupBonus: '60,000 points',
-      apr: '21.49% - 28.49%',
+      name: 'Bank of America Customized Cash',
+      issuer: 'Bank of america',
+      score: 88,
+      reason: 'Perfect for Amazon shoppers with 5% rewards on shopping.',
+      annualFee: 0,
+      signupBonus: '₹200 bonus',
+      apr: '18.24% - 28.24%',
       benefits: [
-        '4x points at restaurants',
-        '4x points at U.S. supermarkets',
-        '3x points on flights',
-        '₹120 dining credit annually'
+        '5% rewards on Shopping (including Amazon)',
+        '2% on Dining, Fuel, and Bills',
+        'No annual fee',
+        'Low introductory APR'
       ],
       image: 'https://images.unsplash.com/photo-1591085686350-798c0f9faa7f?w=400&q=80'
     }
@@ -236,10 +237,28 @@ export function SmartPick({ cards = [], transactions = [] }: SmartPickProps) {
               </div>
             </div>
 
-            {/* Card Usage Advice */}
-            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
-              <h3 className="text-lg font-medium text-indigo-300 mb-1">Smart Usage Advice</h3>
-              <p className="text-gray-200">{analysis.smart_card_usage_advice}</p>
+            {/* AI Highlight Recommendation */}
+            <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Brain className="w-24 h-24" />
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded">AI Choice</span>
+                  <h3 className="text-xl font-bold text-white">Recommended for your NEXT Spend</h3>
+                </div>
+                <p className="text-lg text-indigo-100 leading-relaxed mb-4">
+                  {analysis.smart_card_usage_advice}
+                </p>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="px-3 py-1.5 bg-indigo-500/30 rounded-lg text-indigo-200 border border-indigo-400/30">
+                    Category Winner: <span className="text-white font-bold">{analysis.top_spending_categories[0]?.category}</span>
+                  </div>
+                  <div className="px-3 py-1.5 bg-green-500/30 rounded-lg text-green-200 border border-green-400/30">
+                    Impact: <span className="text-white font-bold">Max Reward Rate</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Top Categories */}
@@ -276,8 +295,15 @@ export function SmartPick({ cards = [], transactions = [] }: SmartPickProps) {
                   alt={card.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-4 right-4 bg-gradient-to-br from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full font-bold text-sm">
-                  {card.score}% Match
+                <div className="absolute top-4 right-4 flex flex-col items-end gap-2">
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full font-bold text-sm shadow-xl">
+                    {card.score}% Match
+                  </div>
+                  {analysis?.potential_rewards?.[card.issuer] !== undefined && (
+                    <div className="bg-green-500 text-white px-3 py-1 rounded-full font-black text-xs shadow-xl animate-bounce">
+                      +₹{Math.round(analysis.potential_rewards[card.issuer])} Rewards
+                    </div>
+                  )}
                 </div>
               </div>
 

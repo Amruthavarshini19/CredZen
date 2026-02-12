@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -12,62 +12,71 @@ export function DebtSimulator() {
     const [apr, setApr] = useState(24); // Typical credit card APR
     const [payment, setPayment] = useState(50);
 
-    // Calculate Amortization
-    const results = useMemo(() => {
-        let balance = purchaseAmount;
-        const monthlyRate = apr / 100 / 12;
-        let totalInterest = 0;
-        let months = 0;
-        const data = [];
+    const [results, setResults] = useState<any>({
+        isInfinite: false,
+        totalInterest: 0,
+        months: 0,
+        totalCost: 0,
+        data: [],
+        minPayment: 0
+    });
 
-        // Safety break to prevent infinite loops if payment is too low
-        // Minimum payment must cover at least the interest
-        const minInterest = balance * monthlyRate;
+    // Debounce effect to call API
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/simulator/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        principal: purchaseAmount,
+                        rate: apr,
+                        monthly_payment: payment
+                    })
+                });
 
-        // If payment is less than interest, debt grows forever
-        if (payment <= minInterest) {
-            return {
-                isInfinite: true,
-                totalInterest: 0,
-                months: 0,
-                totalCost: 0,
-                data: [],
-                minPayment: Math.ceil(minInterest) + 1
-            };
-        }
+                if (!res.ok) {
+                    const err = await res.json();
+                    if (err.detail && typeof err.detail === 'string') {
+                        // Handle specific backend error for infinite debt
+                        if (err.detail.includes("too low")) {
+                            setResults((prev: any) => ({ ...prev, isInfinite: true }));
+                        }
+                    }
+                    return;
+                }
 
-        while (balance > 0 && months < 360) { // Cap at 30 years
-            const interest = balance * monthlyRate;
-            const principalPaid = payment - interest;
-            totalInterest += interest;
-            balance -= principalPaid;
-            if (balance < 0) balance = 0;
+                const data = await res.json();
 
-            months++;
+                // Map backend response to frontend format
+                if (data) {
+                    setResults({
+                        isInfinite: false,
+                        totalInterest: data.total_interest,
+                        months: data.months_to_pay_off,
+                        totalCost: data.total_payment,
+                        data: data.schedule.map((s: any) => ({
+                            month: s.month,
+                            Principal: Math.round(s.principal_paid),
+                            Interest: Math.round(s.interest_paid),
+                            Balance: Math.round(s.remaining_balance)
+                        })),
+                        minPayment: data.min_payment || 0
+                    });
+                }
 
-            // Data for chart every month
-            data.push({
-                month: months,
-                Principal: Math.round(purchaseAmount - balance > purchaseAmount ? purchaseAmount : purchaseAmount - balance), // How much of original paid
-                Interest: Math.round(totalInterest),
-                Balance: Math.round(balance)
-            });
-        }
+            } catch (error) {
+                console.error("Simulation failed", error);
+            }
+        }, 500); // 500ms debounce
 
-        return {
-            isInfinite: false,
-            totalInterest,
-            months,
-            totalCost: purchaseAmount + totalInterest,
-            data,
-            minPayment: Math.ceil(purchaseAmount * monthlyRate) + 1
-        };
+        return () => clearTimeout(timer);
     }, [purchaseAmount, apr, payment]);
 
     // Opportunity Cost Mapper
     const getOpportunityCost = (interest: number) => {
         if (interest > 2000) return { item: "A Round-Trip Flight to Europe", icon: <Plane className="w-6 h-6" /> };
-        if (interest > 1000) return { item: "A New Smartphone", icon: <Calculator className="w-6 h-6" /> }; // Placeholder icon
+        if (interest > 1000) return { item: "A New Smartphone", icon: <Calculator className="w-6 h-6" /> };
         if (interest > 500) return { item: "A Weekend Getaway", icon: <Plane className="w-6 h-6" /> };
         if (interest > 200) return { item: "A Fancy Dinner for Two", icon: <ShoppingBag className="w-6 h-6" /> };
         if (interest > 50) return { item: "A Month of Coffee", icon: <Coffee className="w-6 h-6" /> };

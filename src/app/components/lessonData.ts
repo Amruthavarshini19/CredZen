@@ -35,23 +35,23 @@ export const lessonsData: LessonContent[] = [
     flashcards: [
       {
         id: 1,
-        front: "What is a credit card?",
-        back: "A credit card is a financial tool that allows you to borrow money from a card issuer to make purchases. You pay the balance later, typically on a monthly basis."
+        front: "The Real Cost of Interest",
+        back: "If you only pay the minimum on a ₹5,000 balance at 20% APR, you'll end up paying over ₹10,000 in interest alone! Always aim to pay the full statement balance."
       },
       {
         id: 2,
-        front: "What is a credit limit?",
-        back: "A credit limit is the maximum amount of money you can borrow using your credit card. It is set by the card issuer based on your creditworthiness."
+        front: "The 30% Utilization Rule",
+        back: "Maxing out your card (100% utilization) can drop your credit score by 50+ points instantly. Keep it under 30% for safety, and under 10% for the best score growth."
       },
       {
         id: 3,
-        front: "What is a billing cycle?",
-        back: "A billing cycle is the period between consecutive billing statements, typically 28-31 days. All purchases made during this period appear on your monthly bill."
+        front: "The 'Grace Period' Trap",
+        back: "The 20-50 day interest-free grace period only applies if you paid your PREVIOUS statement in full. If you carry debt, new purchases start accruing interest immediately!"
       },
       {
         id: 4,
-        front: "What is the grace period?",
-        back: "The grace period is the time (usually 20-25 days) you have to pay your credit card balance before interest charges are applied. It typically starts from your billing cycle close date."
+        front: "Statement Date vs Due Date",
+        back: "The Statement Date is when your balance is reported to bureaus. To boost your score, pay your balance down BEFORE the statement date, not just before the due date."
       }
     ],
     mcqQuestions: [

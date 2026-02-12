@@ -317,7 +317,7 @@ export function CreditCardTracker({ cards: walletCards = [], transactions = [], 
             <TrendingUp className="w-5 h-5 text-pink-400" />
           </div>
           <p className="text-3xl font-bold text-white">₹{totals.totalSpend.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-2">{((totals.totalSpend / totals.totalLimit) * 100).toFixed(1)}% utilized</p>
+          <p className="text-xs text-gray-400 mt-2">{totals.totalLimit > 0 ? ((totals.totalSpend / totals.totalLimit) * 100).toFixed(1) : '0.0'}% utilized</p>
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border-emerald-500/30 p-6">
@@ -341,7 +341,7 @@ export function CreditCardTracker({ cards: walletCards = [], transactions = [], 
               <h3 className="font-semibold text-white">Credit Card Insights</h3>
               <ul className="space-y-1 text-sm text-gray-200">
                 <li>• You have {cards.length} credit card{cards.length > 1 ? 's' : ''} with a combined limit of ₹{totals.totalLimit.toLocaleString()}</li>
-                <li>• Overall utilization: {((totals.totalSpend / totals.totalLimit) * 100).toFixed(1)}% of your total available credit</li>
+                <li>• Overall utilization: {totals.totalLimit > 0 ? ((totals.totalSpend / totals.totalLimit) * 100).toFixed(1) : '0.0'}% of your total available credit</li>
                 <li>• Total available balance: ₹{totals.totalBalance.toLocaleString()}</li>
                 {totals.totalSpend > totals.totalLimit * 0.7 && (
                   <li className="text-red-300">⚠️ Your overall utilization is high. Try to keep it below 30% for better credit health.</li>

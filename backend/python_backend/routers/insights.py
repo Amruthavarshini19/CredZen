@@ -47,7 +47,7 @@ Generate insights.
 </s>
 <|assistant|>
 """
-        ai_response_text = await LLMService.generate_insights(prompt)
+        ai_response_text = LLMService.generate_insights(prompt)
         
         # Parse JSON from AI response
         import json

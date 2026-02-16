@@ -1,4 +1,5 @@
 import httpx
+import boto3
 from config import settings
 import json
 
@@ -6,28 +7,119 @@ class LLMService:
     HF_API_URL = "https://router.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
     
     @staticmethod
-    async def generate_insights(prompt: str):
-        headers = {
-            "Authorization": f"Bearer {settings.HF_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": 1000,
-                "temperature": 0.3,
-                "return_full_text": False
-            }
-        }
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(LLMService.HF_API_URL, headers=headers, json=payload, timeout=30.0)
+    def generate_insights(prompt: str):
+        try:
+            client = boto3.client("bedrock-runtime", region_name="us-east-1")
             
-            if response.status_code != 200:
-                raise Exception(f"HF API Error: {response.text}")
+            body = json.dumps({
+                "inferenceConfig": {
+                    "max_new_tokens": 1000
+                },
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            })
+
+            model_id = "amazon.nova-micro-v1:0"
+            
+            response = client.invoke_model(
+                modelId=model_id,
+                body=body
+            )
+
+            response_body = json.loads(response.get("body").read())
+            output_text = response_body.get("output", {}).get("message", {}).get("content", [])[0].get("text", "")
+            return output_text
+            
+        except Exception as e:
+            print(f"Error calling Amazon Nova: {e}")
+            # Return a fallback JSON string so the parser in insights.py doesn't crash completely, 
+            # or just return empty string and let caller handle. 
+            # The caller expects a string containing JSON.
+            return "{}"
+
+    @staticmethod
+    def generate_financial_insights(data: dict):
+        """
+        Generates human-friendly financial insights using Amazon Nova via AWS Bedrock.
+        """
+        try:
+            client = boto3.client("bedrock-runtime", region_name="us-east-1")
+            
+            prompt = f"""
+            You are a friendly and wise financial assistant named Nova. 
+            Analyze the following financial data for a user's loan/debt scenario (all values in Indian Rupees - ₹):
+            
+            - Monthly Payment (EMI): ₹{data.get('payment', 0)}
+            - Total Interest Payable: ₹{data.get('total_interest', 0)}
+            - Time to Debt Freedom: {data.get('months_to_pay_off', 0)} months
+            - Current Utilization: {data.get('utilization', 0)}% (if applicable)
+
+            
+            Your task is to provide VERY CONCISE (max 1-2 short sentences each) insights:
+            1. **Human-Friendly Explanation**: What these numbers mean in simple terms.
+            2. **Behavioral Context**: A quick RELATABLE analogy or nudge.
+            3. **Long-Term Impact**: The key financial takeaway.
+            
+            Output the response in a clear, structured JSON format with keys: "explanation", "behavioral_context", "long_term_impact".
+            Do not use markdown formatting for the JSON. Just return the raw JSON object.
+            Be extremely brief.
+            """
+
+            
+            body = json.dumps({
+                "inferenceConfig": {
+                    "max_new_tokens": 1000
+                },
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ]
+            })
+
+            model_id = "amazon.nova-micro-v1:0"
+            
+            response = client.invoke_model(
+                modelId=model_id,
+                body=body
+            )
+
+            response_body = json.loads(response.get("body").read())
+            output_text = response_body.get("output", {}).get("message", {}).get("content", [])[0].get("text", "")
+            
+            # Attempt to parse JSON from the output
+            try:
+                start = output_text.find('{')
+                end = output_text.rfind('}') + 1
+                return json.loads(output_text[start:end])
+            except:
+                # Fallback if JSON parsing fails
+                return {
+                    "explanation": output_text,
+                    "behavioral_context": "Could not parse specific context.",
+                    "long_term_impact": "Could not parse specific impact."
+                }
                 
-            return response.json()[0]['generated_text']
+        except Exception as e:
+            print(f"Error calling Amazon Nova: {e}")
+            return {
+                "explanation": "Nova is currently unavailable to analyze your finances.",
+                "behavioral_context": "Please check back later.",
+                "long_term_impact": "We are working on restoring the service."
+            }
 
     @staticmethod
     def deterministic_card_recommendation(transactions: list):

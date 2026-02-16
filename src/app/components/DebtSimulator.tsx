@@ -4,7 +4,8 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Slider } from '@/app/components/ui/slider'; // Ensure you have this or use standard input
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { AlertCircle, TrendingUp, IndianRupee, Calculator, Plane, ShoppingBag, Coffee } from 'lucide-react';
+import { AlertCircle, TrendingUp, IndianRupee, Calculator, Plane, ShoppingBag, Coffee, Sparkles, Brain } from 'lucide-react';
+
 import { motion } from 'framer-motion';
 
 export function DebtSimulator() {
@@ -18,8 +19,10 @@ export function DebtSimulator() {
         months: 0,
         totalCost: 0,
         data: [],
-        minPayment: 0
+        minPayment: 0,
+        novaInsights: null
     });
+
 
     // Debounce effect to call API
     useEffect(() => {
@@ -61,8 +64,10 @@ export function DebtSimulator() {
                             Interest: Math.round(s.interest_paid),
                             Balance: Math.round(s.remaining_balance)
                         })),
-                        minPayment: data.min_payment || 0
+                        minPayment: data.min_payment || 0,
+                        novaInsights: data.nova_insights
                     });
+
                 }
 
             } catch (error) {
@@ -212,28 +217,82 @@ export function DebtSimulator() {
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </Card>
-
-                            {/* Opportunity Cost/Reality Check */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/30 rounded-xl p-6 flex items-center gap-6"
-                            >
-                                <div className="p-4 bg-emerald-500/20 rounded-full">
-                                    {opportunity.icon}
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-white">Reality Check</h3>
-                                    <p className="text-emerald-100 text-lg">
-                                        That <span className="font-bold text-white">₹{Math.round(results.totalInterest).toLocaleString()}</span> in interest could have bought you:
-                                    </p>
-                                    <p className="text-2xl font-bold text-emerald-400 mt-1">{opportunity.item}</p>
-                                </div>
-                            </motion.div>
                         </>
                     )}
                 </div>
             </div>
+
+            {/* Nova's AI Insights - Broadened Layout */}
+            {results.novaInsights && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-indigo-900/30 via-purple-900/30 to-pink-900/30 border border-purple-500/20 rounded-2xl p-6"
+                >
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-3 shrink-0">
+                            <div className="p-2 bg-purple-500/20 rounded-lg">
+                                <Sparkles className="w-5 h-5 text-purple-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-white whitespace-nowrap">Nova Analysis</h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+                                    <Brain className="w-3 h-3" />
+                                    <span>Explanation</span>
+                                </div>
+                                <p className="text-gray-300 text-sm leading-snug">
+                                    {results.novaInsights.explanation}
+                                </p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 text-pink-300 text-xs font-bold uppercase tracking-wider">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span>Nudge</span>
+                                </div>
+                                <p className="text-gray-300 text-sm leading-snug">
+                                    {results.novaInsights.behavioral_context}
+                                </p>
+                            </div>
+
+                            <div className="space-y-1 border-l border-white/5 pl-6">
+                                <div className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+                                    Strategic Impact
+                                </div>
+                                <p className="text-gray-400 text-sm leading-snug font-medium">
+                                    {results.novaInsights.long_term_impact}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Opportunity Cost/Reality Check */}
+            {!results.isInfinite && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-6 bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/30 rounded-xl p-6 flex items-center gap-6"
+                >
+                    <div className="p-4 bg-emerald-500/20 rounded-full shrink-0">
+                        {opportunity.icon}
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-white">Reality Check</h3>
+                        <p className="text-emerald-100 text-lg">
+                            That <span className="font-bold text-white">₹{Math.round(results.totalInterest).toLocaleString()}</span> in interest could have bought you:
+                        </p>
+                        <p className="text-2xl font-bold text-emerald-400 mt-1">{opportunity.item}</p>
+                    </div>
+                </motion.div>
+            )}
         </div>
+
     );
 }
+
+

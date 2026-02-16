@@ -6,3 +6,4 @@ python-dotenv
 pandas
 numpy
 pydantic
+boto3
